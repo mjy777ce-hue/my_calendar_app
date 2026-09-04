@@ -1,0 +1,3909 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="./icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="./icon.png">
+
+  <title>My Calendar & Diary & To Do & Done</title>
+  <style>
+    :root {
+      --main-bg: #fff0f5;
+      --main-border: #ffb7c5;
+      --main-color: #d87093;
+      --btn-bg: #ff94a4;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px; background-color: #f5f5f7; margin: 0;
+    }
+    .calendar-container {
+      background: white; border-radius: 16px; padding: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08); width: 100%; max-width: 380px; box-sizing: border-box;
+    }
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .month-nav { display: flex; align-items: center; gap: 6px; }
+    .month-nav h2 { margin: 0; font-size: 16px; }
+    .nav-btn {
+      background: #f0f0f5; border: 1px solid #ddd; border-radius: 6px;
+      padding: 4px 8px; font-size: 12px; font-weight: bold; cursor: pointer; color: #555;
+    }
+    .top-action-btn {
+      padding: 5px 8px; background: var(--main-bg); border: 1px solid var(--main-border);
+      border-radius: 16px; color: var(--main-color); font-size: 11px; font-weight: bold; cursor: pointer;
+    }
+
+    .user-profile-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 6px 10px;
+      background: #fafafa; border-radius: 20px; border: 1px solid #eee;
+    }
+    .user-avatar {
+      width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+      border: 1px solid var(--main-border); background: #fff;
+    }
+
+    .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+    /* 初回表示でも一週間分の書き込み欄の高さを確保します。
+       表示切替をしなくても曜日の下まで正しく描画されます。 */
+    .days { min-height: 94px; grid-auto-rows: 94px; }
+    .weekdays div { font-weight: bold; padding: 6px 0; font-size: 12px; }
+    .sunday { color: #e74c3c; }
+    .saturday { color: #3498db; }
+    
+    .days div.day-cell {
+      height: 94px; padding: 2px; margin: 1px; border-radius: 8px;
+      cursor: pointer; position: relative; box-sizing: border-box;
+      border: 2px solid transparent; display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between; background-color: #fafafa;
+    }
+    .day-top-row { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; padding: 0 1px; z-index: 2; }
+    .day-info { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+    .day-num { font-weight: bold; font-size: 11px; }
+    .rokuyo-text { font-size: 7px; color: #777; margin-top: 1px; transform: scale(0.85); transform-origin: left top; }
+    .mini-holiday-text { font-size: 7px; color: #e74c3c; font-weight: bold; margin-top: 1px; transform: scale(0.85); transform-origin: left top; }
+    .mini-weather-icon { font-size: 11px; line-height: 1; text-align: center; margin-top: -2px; }
+    .days div.day-cell:hover:not(.empty) { background-color: #f0f0f0; }
+    .days .saturday-bg { background-color: #e8f4f8; }
+    .days .sunday-bg { background-color: #fde8e8; }
+    .days .empty { cursor: default; background: transparent; }
+    .days div.today-cell { border: 2px solid #a8d8b9 !important; background-color: #f2fbf5; }
+    
+    .icon-grid {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+      width: 36px; height: 36px; border: 1px dashed var(--main-border); border-radius: 4px;
+      box-sizing: border-box; background-color: #fff9fa; margin-bottom: 2px; position: relative;
+    }
+    .icon-grid-cell {
+      display: flex; justify-content: center; align-items: center; font-size: 10px; overflow: hidden;
+      border-right: 1px dashed var(--main-border); border-bottom: 1px dashed var(--main-border); box-sizing: border-box;
+    }
+    .icon-grid-cell:nth-child(2) { border-right: none; }
+    .icon-grid-cell:nth-child(4) { border-right: none; border-bottom: none; }
+    .icon-grid-cell:nth-child(3) { border-bottom: none; }
+    
+    .more-badge {
+      position: absolute; bottom: -2px; right: -2px; background: var(--main-color); color: white;
+      font-size: 8px; border-radius: 50%; width: 12px; height: 12px; display: flex;
+      align-items: center; justify-content: center; font-weight: bold;
+    }
+
+    .custom-icon-img { 
+      width: 14px; height: 14px; border-radius: 50%; object-fit: cover; aspect-ratio: 1 / 1;
+    }
+
+    .mode-indicator {
+      text-align: center; font-size: 11px; color: var(--main-color);
+      background: var(--main-bg); padding: 4px 8px; border-radius: 12px; margin-bottom: 0%; cursor: pointer;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4); justify-content: center; align-items: center; z-index: 1000;
+    }
+    /* 学習記録カレンダーを開いた状態で、日付の詳細だけをその上に表示する */
+    #studyCalendarModal { z-index: 1050; }
+    #studyRecordCheckModal { z-index: 1100; }
+
+    /* 一日縦長スケジュール上から予定入力する場合は、
+       書き込みポップアップをスケジュールより前面に表示 */
+    #stickyAddModal.from-schedule { z-index: 1200; }
+    #stickyAddModal.from-schedule .modal-content {
+      width: 280px !important;
+      max-width: calc(100vw - 24px) !important;
+      max-height: 82vh;
+      padding: 12px !important;
+    }
+
+    /* 一日縦長スケジュールから開く書き込みポップアップは、
+       PC・スマホともに縦型で表示する。通常の予定入力ポップアップには影響しない。 */
+    #stickyAddModal.from-schedule .sticky-popup-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-header .icon-picker-btn {
+      align-self: center;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-header > button {
+      align-self: center;
+    }
+    #stickyAddModal.from-schedule .sticky-textarea {
+      width: 100% !important;
+      min-height: 58px;
+      box-sizing: border-box;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-body {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 6px !important;
+      width: 100% !important;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+      box-sizing: border-box;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-body > div {
+      width: 100% !important;
+      margin-left: 0 !important;
+      box-sizing: border-box;
+      white-space: normal !important;
+      overflow: visible !important;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-body .time-range-box {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+    #stickyAddModal.from-schedule .time-range-box {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 5px !important;
+      width: 100%;
+    }
+    #stickyAddModal.from-schedule .time-range-box > span {
+      display: block;
+    }
+    #stickyAddModal.from-schedule .time-range-box > div {
+      width: 100%;
+      margin-left: 0 !important;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    #stickyAddModal.from-schedule .tenkey-grid {
+      margin-top: 6px !important;
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-card {
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+    #stickyAddModal.from-schedule .sticky-popup-card > div:last-child {
+      text-align: center !important;
+      margin-top: 4px !important;
+    }
+    .modal-content {
+      background: var(--main-bg); border-radius: 16px; padding: 18px; width: 340px; max-height: 90vh;
+      overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; box-sizing: border-box;
+      border: 1px solid var(--main-border);
+    }
+    .modal-content.full-calendar-modal {
+      width: 100%; max-width: 380px; padding: 16px; background: #fff;
+    }
+    .close-btn { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; color: #888; font-weight: bold; }
+
+    /* タイマー部分 */
+    .timer-section { text-align: center; background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--main-border); }
+    .timer-display { font-size: 26px; font-family: monospace; margin: 6px 0; color: #333; }
+    .timer-btns { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+    .timer-btns button { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; font-size: 12px; }
+    #startBtn { background-color: #2ecc71; }
+    #stopBtn { background-color: #e74c3c; }
+
+    .icon-picker-btn {
+      width: 30px; height: 30px; border: 1px solid #ddd; border-radius: 6px; background: #fff;
+      display: flex; justify-content: center; align-items: center; font-size: 14px; cursor: pointer; overflow: hidden; flex-shrink: 0;
+    }
+    .done-input-row { display: flex; gap: 4px; align-items: center; margin-top: 6px; }
+    .done-text-input { flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 11px; box-sizing: border-box; background: #fff; }
+    .done-add-btn { background: var(--btn-bg); color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+
+    .registered-subjects-list {
+      display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto;
+      margin-top: 4px; padding: 4px; background: #fff9fb; border: 1px dashed var(--main-border); border-radius: 8px;
+    }
+    .registered-subject-item {
+      display: flex; align-items: center; gap: 7px; width: 100%; box-sizing: border-box;
+      padding: 5px 6px; background: #fff; border: 1px solid #eee; border-radius: 7px;
+      cursor: pointer; text-align: left; font-size: 11px;
+    }
+    .registered-subject-item:hover { background: #fff5f8; }
+    .registered-subject-icon {
+      width: 30px; height: 30px; flex: 0 0 30px; border: 1px solid var(--main-border);
+      border-radius: 7px; background: #fff; display:flex; align-items:center; justify-content:center;
+      font-size: 17px; cursor: pointer; overflow: hidden; padding: 2px;
+    }
+    .registered-subject-icon img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; }
+    .study-subject-popup-body { padding: 8px 4px 2px; }
+    .study-subject-popup-icon {
+      width: 72px; height: 72px; margin: 0 auto 10px; border: 2px solid var(--main-border);
+      border-radius: 14px; background: #fff; display:flex; align-items:center; justify-content:center;
+      font-size: 38px; overflow:hidden;
+    }
+    .study-subject-popup-icon img { width:100%; height:100%; object-fit:cover; }
+    .study-subject-popup-name { font-size: 15px; font-weight: bold; color:#333; word-break:break-word; }
+    .study-subject-popup-hint { font-size: 10px; color:#777; margin-top:6px; }
+    .timer-help-box { text-align:left; font-size:9px; line-height:1.55; color:#666; background:#fffafc; border:1px dashed var(--main-border); border-radius:8px; padding:7px 8px; margin:8px 0; }
+    .timer-help-title { font-weight:bold; color:var(--main-color); margin-bottom:3px; text-align:center; }
+    .timer-study-selector { text-align:left; background:#fff; border:1px solid var(--main-border); border-radius:9px; padding:8px; margin-top:7px; }
+    .timer-study-selector-title { font-size:10px; font-weight:bold; color:#555; margin-bottom:4px; }
+    .timer-selected-hint { font-size:9px; color:var(--main-color); background:var(--main-bg); border-radius:6px; padding:4px 6px; margin-top:5px; font-weight:bold; }
+    .registered-subject-item.selected { border:2px solid var(--main-color); background:#fff5f8; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+
+
+    .action-sub-btn {
+      width: 100%; padding: 8px; background: #fff; border: 1px solid var(--main-border);
+      border-radius: 8px; color: var(--main-color); font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 8px; text-align: center;
+    }
+
+    .sticky-textarea {
+      flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 11px;
+      box-sizing: border-box; resize: none; height: 50px; overflow-y: auto; font-family: inherit; background: #fff;
+    }
+    
+    .time-range-box { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #555; margin-bottom: 6px; flex-wrap: wrap; }
+    .time-input-field { width: 42px; text-align: center; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; background:#fff; }
+    .time-input-field.active-field { border: 2px solid var(--main-color); background: #fff9fa; }
+    .time-input-field::placeholder { color: #c9c9c9; opacity: 1; }
+    .time-input-field { -webkit-appearance: none; appearance: none; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
+
+
+    .tenkey-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 160px; margin: 0 auto 8px auto; }
+    .tenkey-grid button {
+      padding: 4px; background: #fff; border: 1px solid var(--main-border); border-radius: 50%;
+      width: 28px; height: 28px; margin: 0 auto; font-size: 11px; font-weight: bold; color: var(--main-color); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .add-note-btn {
+      width: 100%; padding: 8px; background-color: var(--btn-bg); color: white; border: none;
+      border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 8px; font-size: 12px;
+    }
+    
+    .sticky-popup-card {
+      width: 100%; min-height: 140px; border-radius: 12px; background: #fffde7;
+      border: 1px solid var(--main-color); padding: 8px; box-sizing: border-box;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: 0 auto; display: flex; flex-direction: column;
+      justify-content: space-between;
+    }
+    .sticky-popup-header { display: flex; align-items: flex-start; gap: 6px; }
+    .sticky-popup-body {
+      flex: 1; overflow-y: auto; font-size: 11px; color: #333; margin: 4px 0; padding-right: 4px;
+      max-height: 120px; white-space: pre-wrap; word-break: break-word;
+    }
+
+    .crop-preview-box {
+      width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--main-border); margin: 10px auto;
+      overflow: hidden; display: flex; justify-content: center; align-items: center; background: #eee;
+    }
+    .crop-preview-box img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1 / 1; }
+
+    .icon-list-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 10px; max-height: 150px; overflow-y: auto; }
+
+    .lang-checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; text-align: left; font-size: 12px; margin-bottom: 12px; }
+    .lang-checkbox-label { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
+    
+    .view-notes-list {
+      max-height: 180px; overflow-y: auto; text-align: left; margin: 10px 0; border-top: 1px solid #eee; padding-top: 8px;
+    }
+    .view-note-item {
+      background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 8px; margin-bottom: 6px; font-size: 12px;
+      white-space: pre-wrap; word-break: break-word; cursor: pointer; transition: all 0.2s ease;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;
+    }
+    .view-note-item.selected-for-delete {
+      border: 2px solid #ff8a80; background: #ffebee;
+    }
+
+    .study-record-popup-modal {
+      width: 300px;
+      max-height: 70vh;
+      border-radius: 16px;
+      background: var(--main-bg);
+      border: 1px solid var(--main-border);
+      padding: 16px;
+      box-sizing: border-box;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      position: relative;
+    }
+    .study-record-scroll-box {
+      max-height: 150px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .schedule-timeline { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; text-align: left; }
+    .schedule-hour-row { 
+      display: flex; gap: 8px; border-bottom: 1px dashed #eee; padding: 6px 4px; font-size: 11px; align-items: flex-start;
+      border-radius: 6px; cursor: pointer; transition: background 0.15s; background: #fff;
+    }
+    .schedule-hour-row:hover { background: #fdf2f4; }
+    .schedule-time-lbl { width: 45px; font-weight: bold; color: var(--main-color); flex-shrink: 0; padding-top: 2px; }
+    .schedule-content { flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 20px; }
+    .schedule-sticky-card {
+      background: #fffde7; border: 1px solid #ffe082; border-radius: 6px; padding: 6px; font-size: 11px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;
+      transition: transform 0.1s; cursor: pointer;
+    }
+    .schedule-sticky-card.selected-trash {
+      border: 2px solid #ff8a80; background: #ffebee;
+    }
+
+    .trash-area {
+      margin-top: 10px; padding: 10px; border: 2px dashed #ff8a80; border-radius: 10px;
+      background: #ffebee; color: #c62828; font-size: 11px; font-weight: bold; text-align: center;
+      transition: background 0.2s, border-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; user-select: none;
+    }
+    .trash-area:hover, .trash-area.drag-over { background: #ffcdd2; border-color: #e53935; }
+
+    .lang-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 2px solid var(--main-bg); }
+    .lang-tab-btn { flex: 1; padding: 6px; font-size: 11px; font-weight: bold; border: none; background: #f0f0f5; color: #666; border-radius: 6px 6px 0 0; cursor: pointer; }
+    .lang-tab-btn.active { background: var(--main-color); color: white; }
+
+    .lang-card {
+      width: 100%; min-height: 180px; border-radius: 14px; background: #fffde7;
+      border: 1px solid var(--main-color); padding: 12px; box-sizing: border-box;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: 0 auto 10px auto; display: flex; flex-direction: column;
+      justify-content: space-between; text-align: left; position: relative;
+    }
+    .lang-word-header { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 16px; color: #333; margin-bottom: 0px; }
+    .audio-btn { background: #f0f0f5; border: 1px solid #ccc; border-radius: 50%; width: 26px; height: 26px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+    .audio-btn:hover { background: #e0e0eb; }
+    .lang-meta-info { font-size: 11px; color: #666; margin-bottom: 6px; }
+    .lang-meta-badge { display: inline-block; background: #f0f4f8; color: #4a6572; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-right: 4px; font-weight: bold; }
+    .lang-phonetic { font-family: sans-serif; color: #78909c; }
+    .lang-example-box { background: #fff; border-left: 3px solid var(--main-border); padding: 6px 8px; font-size: 11px; margin-top: 6px; border-radius: 0 6px 6px 0; }
+    .lang-example-text { color: #333; font-weight: 500; }
+    .lang-example-translation { color: #666; margin-top: 2px; }
+
+    .stock-btn { background: #fff3e0; border: 1px solid #ffe082; color: #f57c00; font-size: 10px; font-weight: bold; border-radius: 12px; padding: 4px 12px; cursor: pointer; margin-top: 6px; display: inline-block; text-align: center; width: 100%; box-sizing: border-box; }
+    .stock-btn:hover { background: #ffe0b2; }
+
+    .word-card-draggable { cursor: grab; user-select: none; }
+    .word-card-draggable:active { cursor: grabbing; }
+    .word-card-draggable.selected-for-delete { border: 2px solid #ff8a80; background: #ffebee; }
+  /* カレンダー内の予定・日記ミニ付箋 */
+.note-mini-grid {
+  width: 100%;
+  height: 62px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  margin-top: 2px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.note-mini-item {
+  min-width: 0;
+  min-height: 0;
+  background: #fff9fa;
+  border: 1px solid var(--main-border);
+  border-radius: 4px;
+  padding: 2px 3px;
+  box-sizing: border-box;
+  text-align: left;
+  overflow: hidden;
+  font-size: 7px;
+  line-height: 1.15;
+  color: #555;
+}
+
+.note-mini-time {
+  display: block;
+  font-size: 6px;
+  color: var(--main-color);
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-mini-text {
+  display: block;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-mini-icon {
+  font-size: 8px;
+}
+/* =========================================
+   日付タップ後の「予定・日記」付箋
+   横2列・縦に増えてスクロール
+   ========================================= */
+
+#datePopupNotesList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 3px;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+/* 実際に現在のJavaScriptが作っている予定カード */
+#datePopupNotesList .view-note-item {
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+
+  box-sizing: border-box;
+  margin: 0;
+
+  padding: 7px;
+
+  background: #fffdf2;
+  border: 1px solid #eadfbc;
+  border-radius: 7px;
+
+  overflow: hidden;
+}
+
+/* 時刻 */
+#datePopupNotesList .view-note-item > div:first-child > div:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  font-size: 9px;
+}
+
+/* 予定・日記本文 */
+#datePopupNotesList .view-note-item > div:first-child > div:nth-child(2) {
+  font-size: 11px;
+  line-height: 1.3;
+
+  word-break: break-word;
+}
+
+/* 「選択」は小さく */
+#datePopupNotesList .view-note-item > span {
+  font-size: 8px !important;
+}
+ width:100%;
+box-sizing:border-box;
+white-space:nowrap;
+overflow:hidden;
+/* 今日の予定・日記：時間欄の縦の余白を詰める */
+.date-popup-time-format {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 18px !important;
+  min-height: 18px !important;
+
+  display: flex !important;
+  align-items: center !important;
+}
+
+.date-popup-time-range {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+  </style>
+</head>
+<body>
+
+<div class="calendar-container">
+  <div class="user-profile-bar">
+    <span style="font-size:11px; font-weight:bold; color:#555;" id="userNameDisplay">マイ カレンダー</span>
+  </div>
+
+  <div class="header-row">
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">&lt;&lt;</button>
+      <h2 id="calendarHeaderTitle">2026年 8月</h2>
+      <button class="nav-btn" onclick="changeMonth(1)">&gt;&gt;</button>
+    </div>
+  <div style="display:flex; gap:4px; flex-wrap:wrap;">
+  <button class="top-action-btn" onclick="openReviewModal()">📚 語学</button>
+  <button class="top-action-btn" onclick="openSettingsModal()">⚙️ 設定</button>
+  <button class="top-action-btn" onclick="openCreateMenuModal()">📷 作成</button>
+  <button class="top-action-btn" onclick="openTodayDatePopup()">📋 今日の予定・日記</button>
+</div> 
+
+</div>
+
+  <div class="mode-indicator" id="modeIndicator" onclick="toggleViewMode()">
+    📱 一週間モード（タップで1ヶ月表示）
+  </div>
+
+   <!-- 日付グリッド用のコンテナ -->
+  <div class="days-grid">
+ <div class="weekdays">
+    <div class="sunday">日</div>
+    <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div>
+    <div class="saturday">土</div>
+  </div>
+  <div class="days" id="daysContainer"></div>
+  </div>
+
+    <!-- 日付のセルがここに入ります -->
+  <div id="weekNavButtons" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+    <button class="nav-btn" onclick="changeWeek(-1)" style="flex: 1; margin-right: 4px;">&lt;&lt; 前の週</button>
+    <button class="nav-btn" onclick="changeWeek(1)" style="flex: 1; margin-left: 4px;">次の週 &gt;&gt;</button>
+  </div>
+</div>
+
+<!-- 作成メニュー Modal -->
+<div class="modal-overlay" id="createMenuModal">
+  <div class="modal-content" style="text-align:center;">
+    <span class="close-btn" onclick="closeModal('createMenuModal')">✕</span>
+    <h3 style="margin-top:0; color:var(--main-color); font-size:15px;">作成メニュー</h3>
+    <button class="action-sub-btn" onclick="closeModal('createMenuModal'); openTodayTimerModal(timerModal);">⏱️ 学習記録タイマーを開く</button>
+     <button class="action-sub-btn" onclick="closeModal('createMenuModal'); openStudyCalendarModal();">📊 学習記録カレンダーを開く</button>
+    <button class="action-sub-btn" onclick="closeModal('createMenuModal'); openIconModal('general');">📷 マイスタンプを作成する</button>
+  </div>
+</div>
+
+<!-- 付箋ポップアップ Modal -->
+<div class="modal-overlay" id="stickyAddModal">
+  <div class="modal-content full-calendar-modal" style="width:320px; padding:16px;">
+    <span class="close-btn" onclick="closeModal('stickyAddModal')">✕</span>
+    <h3 id="stickyDateTitle" style="margin:0 0 10px 0; color:var(--main-color); text-align:center; font-size:14px;">予定・付箋追加</h3>
+
+    <div class="sticky-popup-card">
+      <div class="sticky-popup-header">
+        <div class="icon-picker-btn" id="noteIconBtn" onclick="showIconPicker('note')">📌</div>
+        <button type="button" onclick="openIconModal('note')" style="padding:4px; font-size:9px; background:var(--main-bg); border:1px solid var(--main-border); border-radius:4px; cursor:pointer;">📷追加</button>
+        <textarea id="noteInput" class="sticky-textarea" placeholder="メモ・予定を入力..."></textarea>
+      </div>
+      <div class="sticky-popup-body">
+       <div style="
+  display:flex;
+  align-items:center;
+  gap:5px;
+  margin:0 0 2px 0;
+  width:100%;
+  box-sizing:border-box;
+  white-space:nowrap;
+  overflow:hidden;
+">
+
+  <span style="font-size:10px; flex-shrink:0;">
+    開始〜終了時刻：
+  </span>
+
+  <label style="font-size:9px; cursor:pointer; flex-shrink:0;">
+    <input type="radio"
+           name="globalTimeFormat"
+           value="12"
+           onchange="toggleGlobalTimeFormat('12')">
+    12h
+  </label>
+
+  <label style="font-size:9px; cursor:pointer; flex-shrink:0;">
+    <input type="radio"
+           name="globalTimeFormat"
+           value="24"
+           checked
+           onchange="toggleGlobalTimeFormat('24')">
+    24h
+  </label>
+
+</div> 
+        <div class="time-range-box" style="margin-bottom:2px;">
+          <span id="stickyTimeLabel">予定：</span>
+          <div style="display:flex; align-items:center; gap:2px; margin-left:auto;">
+            <select id="startAmPm" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+            <input type="text" id="startTimeHourInput" onfocus="setActiveTimeInput('startTimeHourInput'); setTimeout(() => this.select(), 0)" class="time-input-field active-field" placeholder="00" maxlength="2" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onclick="setActiveTimeInput('startTimeHourInput'); setTimeout(() => this.select(), 0)">
+            <span style="font-weight:bold;">：</span>
+            <input type="text" id="startTimeMinInput" onfocus="this.select()" class="time-input-field" placeholder="00" maxlength="2" onclick="setActiveTimeInput('startTimeMinInput')">
+            <span>〜</span>
+            <select id="endAmPm" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+            <input type="text" id="endTimeHourInput" onfocus="this.select()" class="time-input-field" placeholder="00" maxlength="2" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onclick="setActiveTimeInput('endTimeHourInput')">
+            <span style="font-weight:bold;">：</span>
+            <input type="text" id="endTimeMinInput" onfocus="setActiveTimeInput('endTimeMinInput'); setTimeout(() => this.select(), 0)" class="time-input-field" placeholder="00" maxlength="2" onclick="setActiveTimeInput('endTimeMinInput'); setTimeout(() => this.select(), 0)">
+          </div>
+        </div>
+        <div class="time-range-box">
+          <span style="color:#e74c3c; font-weight:bold;">🔔 通知:</span>
+          <div style="display:flex; align-items:center; gap:2px; margin-left:auto;">
+            <select id="notifyAmPm" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+            <input type="text" id="notifyTimeHourInput" onfocus="this.select()" class="time-input-field" placeholder="08" maxlength="2" onclick="setActiveTimeInput('notifyTimeHourInput')">
+            <span style="font-weight:bold;">：</span>
+            <input type="text" id="notifyTimeMinInput" onfocus="this.select()" class="time-input-field" placeholder="50" maxlength="2" onclick="setActiveTimeInput('notifyTimeMinInput')">
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <button class="add-note-btn" style="width:auto; padding:4px 14px; margin:0; font-size:11px;" onclick="addNoteToSelectedDay()">OK</button>
+      </div>
+    </div>
+
+    <div class="tenkey-grid" style="margin-top:10px;">
+      <button onclick="pressDigit('1')">①</button><button onclick="pressDigit('2')">②</button><button onclick="pressDigit('3')">③</button>
+      <button onclick="pressDigit('4')">④</button><button onclick="pressDigit('5')">⑤</button><button onclick="pressDigit('6')">⑥</button>
+      <button onclick="pressDigit('7')">⑦</button><button onclick="pressDigit('8')">⑧</button><button onclick="pressDigit('9')">⑨</button>
+      <button onclick="pressDigit('BS')" style="font-size:9px;">←</button><button onclick="pressDigit('0')">0</button><button onclick="pressDigit('CLR')" style="font-size:9px;">C</button>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+      <button class="action-sub-btn" style="padding:4px; font-size:10px; margin:0;" onclick="closeModal('stickyAddModal'); openTodayTimerModal();">⏱️ 学習記録タイマーを開く</button>
+      <button class="action-sub-btn" style="padding:4px; font-size:10px; margin:0;" onclick="closeModal('stickyAddModal'); openVerticalScheduleModalFromMain();">📅 一日縦長スケジュールへ</button>
+    </div>
+  </div>
+</div>
+
+<!-- 学習記録確認ポップアップ Modal -->
+<div class="modal-overlay" id="studyRecordCheckModal">
+  <div class="study-record-popup-modal">
+    <span class="close-btn" onclick="closeModal('studyRecordCheckModal')">✕</span>
+    <h3 id="studyRecordCheckTitle" style="margin:0 0 6px 0; color:var(--main-color); text-align:center; font-size:14px;">学習記録確認</h3>
+    <div style="font-size:10px; color:#666; text-align:center; margin-bottom:6px;">
+      タップまたはゴミ箱へドラッグして消去できます。
+    </div>
+
+    <div class="sticky-popup-card" style="margin-bottom:6px;">
+      <div class="study-record-scroll-box">
+        <div id="studyRecordCheckList" class="view-notes-list" style="margin:0; border:none; padding:0;"></div>
+      </div>
+    </div>
+
+    <div class="trash-area" id="studyRecordCheckTrashBin" onclick="deleteSelectedStudyRecordCheckItem()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleStudyRecordCheckDrop(event)">
+      🗑️ ゴミ箱（ここにドラッグまたはタップで消去）
+    </div>
+
+    <div style="margin-top:8px; display:flex; gap:6px;">
+      <button class="add-note-btn" style="margin:0; flex:1; background-color:var(--main-color); font-size:11px; padding:6px;" onclick="closeModal('studyRecordCheckModal'); openStickyModalWithDate(currentSelectedDay);">＋ 予定・メモ追加</button>
+      <button class="add-note-btn" style="margin:0; flex:1; background-color:#95a5a6; font-size:11px; padding:6px;" onclick="closeModal('studyRecordCheckModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日付タップ時ポップアップ Modal -->
+<div class="modal-overlay" id="datePopupModal">
+  <div class="modal-content" style="width:300px; text-align:center;">
+    <span class="close-btn" onclick="closeModal('datePopupModal')">✕</span>
+    <h3 id="datePopupTitle" style="margin:0 0 10px 0; color:var(--main-color); font-size:14px;">YYYY/MM/DD・今日の予定・日記など</h3>
+    
+    <!-- 予定やメモ付箋を記入し表示させておく機能：通常カレンダーの日付タップ専用 -->
+    <div class="sticky-popup-card" style="margin-bottom:8px;">
+      <div class="sticky-popup-header">
+        <div class="icon-picker-btn" id="popupNoteIconBtn" onclick="openIconModal('popupNote')">📌</div>
+        <textarea id="popupNoteInput" class="sticky-textarea" placeholder="予定やメモ付箋を入力..."></textarea>
+      </div>
+      <div class="sticky-popup-body" style="text-align:left;">
+<div style="display:flex; justify-content:flex-end; margin-bottom:4px;">
+  <label style="font-size:10px; color:#555; cursor:pointer;">
+    <input type="radio"
+           name="popupTimeFormat"
+           value="12"
+           onchange="togglePopupTimeFormat('12')">
+    12h
+  </label>
+
+  <label style="font-size:10px; color:#555; cursor:pointer; margin-left:6px;">
+    <input type="radio"
+           name="popupTimeFormat"
+           value="24"
+           checked
+           onchange="togglePopupTimeFormat('24')">
+    24h
+  </label>
+</div>
+
+
+
+        <div class="time-range-box" style="margin-bottom:2px;">
+            <div style="display:flex; align-items:center; gap:2px; margin-left:auto;">
+            <select id="popupStartAmPm" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+            <input type="text" id="popupStartTimeHour" onfocus="this.select()" class="time-input-field active-field" placeholder="00" maxlength="2" onclick="setActivePopupTimeInput('popupStartTimeHour'); setTimeout(() => this.select(), 0)">
+            <span>：</span>
+            <input type="text" id="popupStartTimeMin" onfocus="setActivePopupTimeInput('popupStartTimeMin'); setTimeout(() => this.select(), 0)" class="time-input-field" placeholder="00" maxlength="2" onclick="setActivePopupTimeInput('popupStartTimeMin'); setTimeout(() => this.select(), 0)">
+            <span>〜</span>
+            <select id="popupEndAmPm" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+            <input type="text" id="popupEndTimeHour" onfocus="this.select()" class="time-input-field" placeholder="00" maxlength="2" onclick="setActivePopupTimeInput('popupEndTimeHour'); setTimeout(() => this.select(), 0)">
+            <span>：</span>
+            <input type="text" id="popupEndTimeMin" onfocus="setActivePopupTimeInput('popupEndTimeMin'); setTimeout(() => this.select(), 0)" class="time-input-field" placeholder="00" maxlength="2" onclick="setActivePopupTimeInput('popupEndTimeMin'); setTimeout(() => this.select(), 0)">
+          </div>
+        </div>
+      </div>
+      
+      <button class="add-note-btn" style="margin:4px 0 0 0; padding:4px;" onclick="addNoteFromDatePopup()">付箋を追加</button>
+    </div>
+
+    <!-- テンキー (①②デザイン) -->
+    <div class="tenkey-grid" style="margin-bottom:8px;">
+      <button onclick="pressPopupDigit('1')">①</button><button onclick="pressPopupDigit('2')">②</button><button onclick="pressPopupDigit('3')">③</button>
+      <button onclick="pressPopupDigit('4')">④</button><button onclick="pressPopupDigit('5')">⑤</button><button onclick="pressPopupDigit('6')">⑥</button>
+      <button onclick="pressPopupDigit('7')">⑦</button><button onclick="pressPopupDigit('8')">⑧</button><button onclick="pressPopupDigit('9')">⑨</button>
+      <button onclick="pressPopupDigit('BS')" style="font-size:9px;">←</button><button onclick="pressPopupDigit('0')">0</button><button onclick="pressPopupDigit('CLR')" style="font-size:9px;">C</button>
+    </div>
+
+    <div style="font-size:11px; color:#555; text-align:left; max-height:120px; overflow-y:auto; margin-bottom:8px;" id="datePopupNotesList"></div>
+
+    <!-- ゴミ箱消去機能付きリストエリア -->
+    <div class="trash-area" id="datePopupTrashBin" onclick="deleteSelectedDatePopupNote()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleDatePopupDrop(event)">
+      🗑️ ゴミ箱（選択した付箋をタップまたはドラッグして消去）
+    </div>
+
+    <button class="action-sub-btn" style="margin-top:8px;" onclick="openVerticalScheduleFromDatePopup();">📅 一日縦長スケジュールを開く</button>
+    <button class="action-sub-btn" style="margin-top:8px;" onclick="openTimerFromDatePopup();">⏱️ この日の学習タイマーを開く</button>
+  </div>
+</div>
+
+<!-- 学習記録タイマー Modal -->
+<div class="modal-overlay" id="timerModal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal('timerModal')">✕</span>
+    <h3 id="timerDateTitle" style="margin:0 0 10px 0; color:var(--main-color); text-align:center; font-size:15px;">⏱️ 学習記録タイマー</h3>
+    <div class="timer-section">
+      <div style="margin:6px 0; display:flex; justify-content:center; align-items:center; gap:6px;">
+        <input type="text" id="timerRecordDate" placeholder="YYYY/MM/DD" maxlength="10" inputmode="numeric" aria-label="学習記録の日付" style="padding:6px 8px; border-radius:6px; border:1px solid #ddd; font-size:11px; width:110px; text-align:center; box-sizing:border-box;" onchange="setTimerRecordDate(this.value)" onblur="setTimerRecordDate(this.value)">
+      </div>
+      <select id="timerCategorySelect" aria-hidden="true" tabindex="-1" style="display:none;"></select>
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      <div class="timer-btns">
+        <button id="startBtn" onclick="startTimer()">Start</button>
+        <button id="stopBtn" onclick="stopTimer()">Stop</button>
+        <button id="resetBtn" onclick="resetTimer()" style="background-color:#95a5a6;">Reset</button>
+      </div>
+
+      <div class="timer-help-box">
+        <div class="timer-help-title">⭐ 使い方 ⭐</div>
+        <div>① 「アイコン」をタップして、好きなアイコンを選びます。</div>
+        <div>　📁 パソコン・スマホのフォルダから画像を選ぶこともできます。</div>
+        <div>② 右の入力欄に「学習内容」を入力し、＜登録＞を押します。</div>
+        <div>③ 下の登録一覧から、これから行う学習内容をタップして選択します。</div>
+        <div>④ 選択した状態で＜Start＞→＜Stop＞、または＜手動入力＞を使います。</div>
+        <div>⑤ 学習記録カレンダーには、その学習内容の<strong>アイコンのみ</strong>が表示されます。</div>
+      </div>
+
+      <div class="timer-study-selector">
+        <div class="timer-study-selector-title">🎯 今から行う学習を登録・選択</div>
+        <div class="done-input-row" style="margin-bottom:6px; align-items:center;">
+          <button type="button" class="icon-picker-btn" id="studyIconBtn" onclick="showIconPicker('study')" title="アイコンを選ぶ">🏆</button>
+          <input type="text" id="studyContentInput" class="done-text-input" placeholder="学習内容を入力（例：Duolingo）" autocomplete="off">
+          <button type="button" class="done-add-btn" onclick="registerSubjectAndSave()" style="background-color:#2ecc71;">登録</button>
+        </div>
+        <div style="font-size:9px; color:#777; margin:2px 0 5px;">※ アイコンをタップ → ＜📁画像ファイルを選ぶ＞ または既存のアイコンを選択 → ＜決定＞</div>
+        <div style="font-size:10px; color:#555; margin:7px 0 4px; font-weight:bold;">📚 登録した学習内容（タップ／クリックで表示・選択）</div>
+        <div id="registeredSubjectsList" class="registered-subjects-list"></div>
+        <div class="timer-selected-hint" id="timerSelectedStudyHint">現在の選択：英語学習</div>
+        <div class="trash-area" id="studySubjectTrashBin" style="margin-top:6px; padding:7px;" onclick="deleteSelectedStudySubject()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleStudySubjectDrop(event)">🗑️ 選択した学習内容を削除</div>
+      </div>
+
+      <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-size:10px; color:#555; font-weight:bold;">✍️ 手動入力:</div>
+          <div>
+            <label style="font-size:10px; color:#555; cursor:pointer;"><input type="radio" name="timeFormat" value="12" onchange="toggleTimeFormat('12')"> 12h</label>
+            <label style="font-size:10px; color:#555; cursor:pointer; margin-left:6px;"><input type="radio" name="timeFormat" value="24" checked onchange="toggleTimeFormat('24')"> 24h</label>
+          </div>
+        </div>
+        <div class="done-input-row" style="margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px;">開始:</span>
+          <select id="manualStartAmPmSelect" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+          <input type="text" id="manualStartHour" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="00" maxlength="2" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="width:30px;" onclick="setActiveTimeInput('manualStartHour')">
+          <span style="font-size:11px; font-weight:bold;">：</span>
+          <input type="text" id="manualStartMin" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="00" maxlength="2" style="width:30px;" onclick="setActiveTimeInput('manualStartMin')">
+          <span style="font-size:11px;">〜 終了:</span>
+          <select id="manualEndAmPmSelect" style="font-size:10px; display:none;"><option value="AM">AM</option><option value="PM">PM</option></select>
+          <input type="text" id="manualEndHour" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="00" maxlength="2" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="width:30px;" onclick="setActiveTimeInput('manualEndHour')">
+          <span style="font-size:11px; font-weight:bold;">：</span>
+          <input type="text" id="manualEndMin" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="00" maxlength="2" style="width:30px;" onclick="setActiveTimeInput('manualEndMin')">
+        </div>
+        <div class="done-input-row" style="margin-bottom:6px;">
+          <span style="font-size:11px;">または時間指定:</span>
+          <input type="text" id="manualHoursInput" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="時間(h)" style="width:40px;" onclick="setActiveTimeInput('manualHoursInput')">
+          <span style="font-size:10px;">h</span>
+          <input type="text" id="manualMinutesInput" class="time-input-field" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="分(m)" style="width:40px;" onclick="setActiveTimeInput('manualMinutesInput')">
+          <span style="font-size:10px;">m</span>
+          <button class="done-add-btn" onclick="saveManualTimerRecord()" style="background-color:#3498db; margin-left:auto;">手動追加</button>
+        </div>
+      </div>
+      <button class="action-sub-btn" onclick="closeModal('timerModal'); openStudyCalendarModal();">📊 ＜学習記録カレンダー＞を開く</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📚 登録した学習内容の表示 Modal -->
+<div class="modal-overlay" id="studySubjectPopupModal" style="z-index:1150;">
+  <div class="modal-content" style="width:300px; text-align:center;">
+    <span class="close-btn" onclick="closeModal('studySubjectPopupModal')">✕</span>
+    <h3 id="studySubjectPopupTitle" style="margin:0 0 10px 0; color:var(--main-color); font-size:15px;">学習内容</h3>
+    <div id="studySubjectPopupBody" class="study-subject-popup-body"></div>
+    <button class="add-note-btn" style="margin-top:10px;" onclick="closeModal('studySubjectPopupModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- 📅 一日縦長スケジュール Modal -->
+<div class="modal-overlay" id="verticalScheduleModal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal('verticalScheduleModal')">✕</span>
+    <h3 id="verticalScheduleTitle" style="margin:0 0 6px 0; color:var(--main-color); text-align:center; font-size:15px;">📅 一日縦長スケジュール</h3>
+    <p style="font-size:10px; color:#666; text-align:center; margin-top:0; margin-bottom:8px;">時間帯の行をタップして予定を追加できます。</p>
+    
+    <div class="schedule-timeline" id="verticalScheduleList"></div>
+
+    <div class="trash-area" id="scheduleTrashBin" onclick="deleteSelectedScheduleItem()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleScheduleDrop(event)">
+      🗑️ 選択した付箋を消去（ゴミ箱）
+    </div>
+
+    <button class="add-note-btn" style="margin-top:8px;" onclick="closeModal('verticalScheduleModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- 📊 学習記録カレンダー Modal -->
+<div class="modal-overlay" id="studyCalendarModal">
+  <div class="modal-content full-calendar-modal">
+    <span class="close-btn" onclick="closeModal('studyCalendarModal')">✕</span>
+    <div class="header-row" style="margin-bottom:8px;">
+      <div class="month-nav">
+        <button class="nav-btn" onclick="changeStudyMonth(-1)">&lt;&lt;</button>
+        <h2 id="studyCalendarHeaderTitle">2026年 8月</h2>
+        <button class="nav-btn" onclick="changeStudyMonth(1)">&gt;&gt;</button>
+      </div>
+      <span style="font-size:12px; font-weight:bold; color:var(--main-color);">📊 学習記録</span>
+    </div>
+
+    <p style="font-size:10px; color:#666; text-align:center; margin:0 0 6px 0;">タイマーや手動で記録した学習のみが表示されます。（タップで詳細）</p>
+
+    <div class="weekdays">
+      <div class="sunday">日</div>
+      <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div>
+      <div class="saturday">土</div>
+    </div>
+    <div class="days" id="studyDaysContainer"></div>
+
+    <button class="add-note-btn" style="margin-top:12px;" onclick="closeModal('studyCalendarModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- ⚙️ 設定モーダル -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal('settingsModal')">✕</span>
+    <h3 style="margin:0 0 12px 0; color:var(--main-color); text-align:center; font-size:15px;">⚙️ アプリ設定</h3>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">※＜学習記録＞をしたい場合は、＜作成＞ボタンを押してください。</label>
+</div>
+ <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">※既存のアイコンは生成AIが作成したものです。</label>
+</div>
+    <div style="margin-bottom:12px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#555;">
+      ─予定書き込み欄に何も記入しなくてもアイコンだけ選んで＜付箋を追加＞を押せば記録できます。─<br>
+      ─各コーナーに表示された予定付箋をタップすると、長めの日記やメモを大きく表示して読むことができます。─<br>
+      ─＜アイコンを選ぶ・作る＞で画像ファイルから追加したユーザー画像は、プリセットスタンプとして好きな数だけ保存できます。不要になった画像は、画像をタップして選択したあと、＜🗑️ 選択したユーザー画像を削除＞で削除できます。─
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🎨 カレンダーテーマカラー:</label>
+      <select id="themeSelect" onchange="changeTheme(this.value)" style="width:100%; padding:6px; border-radius:6px; border:1px solid #ddd; font-size:12px; background:#fff;">
+        <option value="pink">🌸 Sakura Pink (ピンク)</option>
+        <option value="mint">🌿 Mint Green (ミント)</option>
+        <option value="blue">🌤️ Sky Blue (スカイブルー)</option>
+        <option value="lavender">🍇 Lavender (ラベンダー)</option>
+        <option value="yellow">🌻 Sunset Yellow (イエロー)</option>
+        <option value="gray">🌫️ Gray (グレー)</option>
+        <option value="black">🖤 Black (黒)</option>
+      </select>
+    </div>
+   <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">📚 語学（二か国語まで選択）:</label>
+      <div class="lang-checkbox-group">
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="en" onchange="limitLangSelection(this)"> 英語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="it" onchange="limitLangSelection(this)"> イタリア語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="fr" onchange="limitLangSelection(this)"> フランス語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="es" onchange="limitLangSelection(this)"> スペイン語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="ar" onchange="limitLangSelection(this)"> アラビア語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="ko" onchange="limitLangSelection(this)"> 韓国語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="zh" onchange="limitLangSelection(this)"> 中国語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="vi" onchange="limitLangSelection(this)"> ベトナム語</label>
+        <label class="lang-checkbox-label"><input type="checkbox" name="appLang" value="de" onchange="limitLangSelection(this)"> ドイツ語</label>
+      </div>
+      <div style="margin-top:8px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#666;">
+        <strong style="color:var(--main-color);">📚 語学学習コーナーについて</strong><br>
+        選択した2言語について、<strong>CEFR A1（入門）〜C2（最上級）</strong>まで、各言語のレベルを幅広くカバーする単語・発音・品詞・意味・例文を学べます。<br>
+        📖 <strong>「前のページ」「次のページ」</strong>で本をめくるように学習できます。AI設定がある場合は、次のページでAIが新しい単語を生成し、取得済みのページはこの端末に保存されます。<br>
+        🔊で発音を聞き、気になった単語は「復習ページにストックする」から保存できます。<br>
+        ※ AI未設定時は内蔵単語リストを使用します。幅広いレベルの新しい単語を継続的に学ぶにはAI設定をおすすめします。
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🤖 AI語学学習（Gemini / OpenAI / Claude / DeepSeek）:</label>
+
+      <div style="font-size:10px; line-height:1.6; color:#555; background:#f8f9fa; border:1px solid #e3e3e3; border-radius:8px; padding:9px; margin-bottom:7px;">
+        <strong>🌐 Gemini以外のAIも使えます</strong><br>
+        語学学習で使うAIサービスを下から選び、各サービスのAPIキーを入力してください。
+        AIは「新しい単語・発音記号・品詞・日本語の意味・自然な例文・日本語訳」を作ります。<br>
+        <span style="color:var(--main-color);">Gemini</span>：Google AI StudioでAPIキーを取得　
+        <span style="color:var(--main-color);">OpenAI</span>：OpenAIのAPIキーを取得　
+        <span style="color:var(--main-color);">Claude</span>：AnthropicのAPIキーを取得　
+        <span style="color:var(--main-color);">DeepSeek</span>：DeepSeek APIキーを取得
+        <br>※ APIキーはパスワードと同じように扱い、SNSや公開GitHubなどに載せないでください。
+        このアプリではキーをHTMLへ直接書き込まず、このブラウザのlocalStorageに保存します。
+        <br><span style="color:#c62828;">※ ブラウザからAPIを直接呼び出す方式なので、Netlifyなどで公開する場合は個人利用向けです。公開アプリとして安全に配布する場合はサーバー側でAPIキーを管理してください。</span>
+      </div>
+
+      <label style="font-size:10px; font-weight:bold; color:#555; display:block; margin-bottom:3px;">① 使用するAIサービス</label>
+      <select id="aiProviderSelect" onchange="updateAiProviderUI()" style="width:100%; padding:6px; border-radius:6px; border:1px solid #ddd; font-size:11px; background:#fff;">
+        <option value="gemini">✨ Gemini（Google）</option>
+        <option value="openai">🟢 OpenAI</option>
+        <option value="anthropic">🟠 Claude（Anthropic）</option>
+        <option value="deepseek">🔵 DeepSeek</option>
+      </select>
+
+      <div id="aiProviderHelp" style="font-size:9px; color:#777; line-height:1.5; margin-top:5px;"></div>
+
+      <label style="font-size:10px; font-weight:bold; color:#555; display:block; margin:7px 0 3px;">② APIキー</label>
+      <input type="text" id="aiApiKeyInput" autocomplete="off" placeholder="選択したサービスのAPIキーを貼り付けます" inputmode="text" autocorrect="off" autocapitalize="none" spellcheck="false"
+        style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:6px; font-size:11px; box-sizing:border-box; background:#fff;"
+        autocomplete="off">
+
+      <label style="font-size:10px; font-weight:bold; color:#555; display:block; margin:7px 0 3px;">③ モデル名（必要な場合だけ変更）</label>
+      <input type="text" id="aiModelInput" placeholder="モデル名"
+        style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:6px; font-size:11px; box-sizing:border-box; background:#fff;"
+        autocomplete="off">
+      <button type="button" onclick="refreshCurrentAiModel()" style="margin-top:5px;width:100%;padding:8px;border:1px solid var(--main-border);border-radius:8px;background:#fff;cursor:pointer;">🔄 現在のAIサービスの利用可能モデルを確認</button>
+
+      <button class="action-sub-btn" style="margin-top:6px; margin-bottom:4px;" onclick="saveAiProviderSettings()">🔐 このAI設定をこの端末に保存</button>
+      <button class="action-sub-btn" style="margin-top:2px; margin-bottom:4px; background:#fff5f5; color:#c62828;" onclick="clearAiProviderKey()">🗑️ このAIのAPIキーを消去</button>
+
+      <div id="aiApiStatus" style="font-size:9px; color:#777; line-height:1.4;">
+        AI未設定の場合は、従来の内蔵単語リストを使用します。
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🌤️ 天気予報・取得場所:</label>
+      <label style="font-size:11px; color:#555; display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="showWeatherCheckbox" onchange="toggleWeatherDisplay(this)"> カレンダーの日付の下にお天気アイコンを表示する
+      </label>
+      <div style="margin-top:7px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#666;">
+        <strong style="color:var(--main-color);">📍 天気予報の場所はGoogle等の位置情報とは別に指定できます。</strong><br>
+        「現在地を取得」または市区町村・都市名を入力して、天気予報を取得する場所を選べます。たとえば「熊谷市」「深谷市」「東京」などです。
+      </div>
+      <div style="display:flex; gap:5px; margin-top:6px;">
+        <input type="text" id="weatherLocationInput" placeholder="市区町村・都市名（例：熊谷市）" style="flex:1; min-width:0; padding:6px 7px; border:1px solid #ddd; border-radius:6px; font-size:10px; box-sizing:border-box; background:#fff;">
+        <button type="button" class="action-sub-btn" style="width:auto; margin:0; padding:5px 8px; font-size:10px; white-space:nowrap;" onclick="searchWeatherLocation()">📍 場所を設定</button>
+      </div>
+      <button type="button" class="action-sub-btn" style="margin-top:5px; margin-bottom:0; padding:5px; font-size:10px;" onclick="useCurrentWeatherLocation()">📱 現在地を取得して設定</button>
+      <div id="weatherLocationStatus" style="font-size:9px; color:#777; margin-top:5px; line-height:1.4;">現在の取得場所：現在地</div>
+    </div>
+
+    <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">📅 六曜表示設定:</label>
+      <label style="font-size:11px; color:#555; display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="showRokuyoCheckbox" onchange="toggleRokuyoDisplay(this)" checked> 六曜を表示する
+      </label>
+    </div>
+<div style="margin-top:8px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; text-align:left; font-size:10px;">
+        <div style="font-weight:bold; color:var(--main-color); margin-bottom:5px;">🔔 通知設定（学習記録以外の予定）</div>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:5px; cursor:pointer;">
+          <input type="checkbox" id="popupNotifyEnabled"> 通知する
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer;">
+          <input type="checkbox" id="popupNotifyWeekBefore"> 一週間前に通知
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:6px; cursor:pointer;">
+          <input type="checkbox" id="popupNotifyPreviousMorning"> 前日の朝（08:00）に通知
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:3px; cursor:pointer;">
+          <input type="checkbox" id="popupNotifyCustom"> 任意の日・時刻に通知
+        </label>
+        <div style="display:flex; align-items:center; gap:4px; margin-left:22px;">
+          <input type="text" id="popupNotifyCustomDate" placeholder="YYYY/MM/DD" maxlength="10" style="width:92px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
+          <input type="text" id="popupNotifyCustomTime" placeholder="08:00" maxlength="5" style="width:54px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
+        </div>
+        <div style="display:flex; align-items:center; gap:5px; margin-top:7px;">
+          <span style="font-size:10px; font-weight:bold; color:#555;">🔔 通知音：</span>
+          <label style="font-size:10px; cursor:pointer;"><input type="radio" name="notificationSoundMode" value="on" onchange="setNotificationSoundMode('on')"> 音あり</label>
+          <label style="font-size:10px; cursor:pointer;"><input type="radio" name="notificationSoundMode" value="off" onchange="setNotificationSoundMode('off')"> 音なし</label>
+          <button type="button" onclick="testNotificationSound()" style="margin-left:auto; padding:3px 6px; font-size:9px; border:1px solid #ddd; border-radius:5px; background:#fff; cursor:pointer;">試聴</button>
+        </div>
+        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 音ありの場合、アプリが動作中のときに短い予定通知音を鳴らします。スマホのOS通知欄の音は端末・ブラウザの通知設定が優先されます。</div>
+        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ ブラウザの通知を許可している場合、予定時刻になると通知します。ブラウザを完全に閉じている場合は通知されません。</div>
+      </div>
+    <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
+      <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🇯🇵 休日・祝日表示設定:</label>
+      <label style="font-size:11px; color:#555; display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="showHolidayCheckbox" onchange="toggleHolidayDisplay(this)" checked> 日本の休日や祝日を表示する
+      </label>
+    </div>
+
+    <button class="add-note-btn" onclick="closeModal('settingsModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- 📚 語学学習コーナー Modal -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal-content" style="width:360px;">
+    <span class="close-btn" onclick="closeModal('reviewModal')">✕</span>
+    <h3 style="margin:0 0 4px 0; color:var(--main-color); text-align:center; font-size:15px;">📚 語学学習コーナー</h3>
+    <p style="font-size:10px; color:#666; text-align:center; margin:0 0 10px 0;">選択した外国語から各言語一つずつの単語帳を表示します。</p>
+
+    <div class="lang-tabs">
+      <button class="lang-tab-btn active" id="langTabStudyBtn" onclick="switchLangTab('study')">📖 学習ページ</button>
+      <button class="lang-tab-btn" id="langTabReviewBtn" onclick="switchLangTab('review')">📝 復習ページ</button>
+    </div>
+
+    <div id="langStudyContent">
+      <div id="langCardsContainer"></div>
+    </div>
+
+    <div id="langReviewContent" style="display:none;">
+      <div style="font-size:11px; font-weight:bold; color:var(--main-color); margin-bottom:6px;">📌 ストックした復習単語一覧（無制限）:</div>
+      <div id="stockListContainer" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
+      <div class="trash-area" id="langTrashBin" onclick="deleteSelectedStockItem()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleLangDrop(event)">
+        🗑️ 単語カードをここにドラッグまたはタップで消去
+      </div>
+    </div>
+
+    <button class="add-note-btn" style="margin-top:10px;" onclick="closeModal('reviewModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- アイコン選択モーダル -->
+<div class="modal-overlay" id="iconModal">
+  <div class="modal-content" style="width:300px; text-align:center;">
+    <span class="close-btn" onclick="closeModal('iconModal')">✕</span>
+    <h3 style="margin-top:0; color:var(--main-color); font-size:14px;">アイコンを選ぶ・作る</h3>
+    
+    <div class="crop-preview-box">
+      <img id="cropPreviewImg" src="" alt="Preview" style="display:none;">
+      <span id="cropPreviewPlaceholder" style="font-size:24px;">📷</span>
+    </div>
+    
+    <input type="file" id="iconImageInput" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" style="display:none;" onchange="handleIconImageUpload(event)">
+    <div style="font-size:11px; color:#666; margin:-2px 0 8px; text-align:left;">スマホでは、端末の「ファイル」などのファイル管理アプリから選べることがあります。対応端末では下のボタンからシステムのファイル選択画面を優先して開きます。</div>
+    <button type="button" class="action-sub-btn" style="background:#fff; margin-bottom:8px;" onclick="chooseIconImageFile()">📁 画像ファイルを選ぶ</button>
+
+    <div style="font-size:11px; font-weight:bold; color:#555; margin:6px 0; text-align:left;">プリセットスタンプ:</div>
+    <div class="icon-list-grid" id="presetIconGrid"></div>
+
+    <div id="userIconTrashBin" class="trash-area" style="margin-top:10px; padding:7px; font-size:10px; cursor:pointer;" onclick="deleteSelectedUserPresetIcon()">
+      🗑️ 選択したユーザー画像を削除
+    </div>
+    <div id="userIconTrashHint" style="font-size:9px; color:#888; margin-top:3px;">ユーザー画像をタップして選択 → ここをタップすると削除できます。</div>
+
+    <button class="add-note-btn" style="margin-top:8px;" onclick="confirmIconSelection()">決定</button>
+  </div>
+</div>
+
+<!-- 予定・日記 詳細表示 Modal -->
+<div class="modal-overlay" id="noteDetailModal">
+  <div class="modal-content" style="width:340px; max-width:calc(100vw - 24px); max-height:82vh; box-sizing:border-box;">
+    <span class="close-btn" onclick="closeModal('noteDetailModal')">✕</span>
+    <h3 id="noteDetailTitle" style="margin:0 0 10px 0; color:var(--main-color); text-align:center; font-size:15px;">予定・日記</h3>
+    <div id="noteDetailIcon" style="text-align:center; margin-bottom:8px;"></div>
+    <div id="noteDetailTime" style="font-size:11px; color:#666; text-align:center; margin-bottom:8px;"></div>
+    <div id="noteDetailText" style="background:#fff; border:1px solid var(--main-border); border-radius:10px; padding:12px; max-height:55vh; overflow-y:auto; white-space:pre-wrap; word-break:break-word; text-align:left; font-size:13px; line-height:1.7;"></div>
+    <button class="add-note-btn" style="margin-top:10px;" onclick="closeModal('noteDetailModal')">閉じる</button>
+  </div>
+</div>
+
+<script>
+  function getTodayDateObject() {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  let currentDate = getTodayDateObject();
+  let studyCurrentDate = getTodayDateObject();
+  let viewMode = 'week';
+  let currentWeekOffset = 0;
+  let currentSelectedDay = null;
+  let activeTimeInputId = 'startTimeHourInput';
+  let activePopupTimeInputId = 'popupStartTimeHour';
+  let globalTimeFormat12h = false;
+  let manualTimeFormat12h = false;
+  let timerInterval = null;
+  let secondsElapsed = 0;
+  let isTimerRunning = false;
+  let selectedCategory = '英語学習';
+  let timerActiveCategory = '';
+  let selectedStudySubjectForDelete = null;
+  let selectedDatePopupNoteIdForDelete = null;
+
+  let appData = {
+    theme: 'pink',
+    selectedLangs: ['en', 'it'],
+    showWeather: true,
+    weatherLocation: { name: '現在地', latitude: null, longitude: null },
+    weatherForecast: {},
+    showRokuyo: true,
+    showHoliday: true,
+    userAvatar: '',
+    notes: {},
+    studyRecords: {},
+    stockWords: [
+      { id: 1, lang: 'en', word: 'Inspire', phonetic: '[inspáiər]', pos: '動詞', meaning: 'ひらめきを与える、鼓舞する', example: 'His speech inspired us.', translation: '彼のスピーチは私たちを鼓舞した。' },
+      { id: 2, lang: 'en', word: 'Curiosity', phonetic: '[kjùəríəsəti]', pos: '名詞', meaning: '好奇心、珍しさ', example: 'Children have a natural curiosity.', translation: '子どもたちは自然な好奇心を持っている。' },
+      { id: 3, lang: 'it', word: 'Curiosità', phonetic: '[kurjozità]', pos: '名詞', meaning: '好奇心', example: 'La curiosità è importante.', translation: '好奇心は重要です。' },
+      { id: 4, lang: 'en', word: 'Diligent', phonetic: '[dílɪdʒənt]', pos: '形容詞', meaning: '勤勉な、入念な', example: 'She is a diligent student.', translation: '彼女は勤勉な学生です。' },
+      { id: 5, lang: 'it', word: 'Armonia', phonetic: '[armo\'ni:a]', pos: '名詞', meaning: '調和', example: 'Vivere in armonia con tutti.', translation: '皆と調和して生きること。' },
+      { id: 6, lang: 'it', word: 'Felicità', phonetic: '[felitʃi\'ta]', pos: '名詞', meaning: '幸福、幸せ', example: 'La felicità è semplice.', translation: '幸せはシンプルです。' }
+    ],
+    customIcons: {},
+    subjectIcons: {},
+    selectedCategory: '英語学習'
+  };
+
+  const languageDatabase = {
+    en: [
+      { word: 'Curiosity', phonetic: '[ˌkjʊriˈɑːsəti]', pos: '名詞', meaning: '好奇心、珍しさ', example: 'Children have a natural curiosity about the world.', translation: '子どもたちは世界に対して自然な好奇心を持っている。' },
+      { word: 'Diligent', phonetic: '[ˈdɪlɪdʒənt]', pos: '形容詞', meaning: '勤勉な、入念な', example: 'She is a diligent student.', translation: '彼女は勤勉な学生です。' },
+      { word: 'Remarkable', phonetic: '[rɪˈmɑːrkəbəl]', pos: '形容詞', meaning: '注目すべき、素晴らしい', example: 'She made remarkable progress this year.', translation: '彼女は今年、目覚ましい進歩を遂げた。' },
+      { word: 'Encourage', phonetic: '[ɪnˈkɜːrɪdʒ]', pos: '動詞', meaning: '励ます、促す', example: 'Good teachers encourage students to ask questions.', translation: '良い先生は生徒に質問するよう促します。' },
+      { word: 'Resilient', phonetic: '[rɪˈzɪliənt]', pos: '形容詞', meaning: '回復力のある、しなやかな', example: 'She is resilient when facing challenges.', translation: '彼女は困難に直面しても立ち直る力があります。' },
+      { word: 'Appreciate', phonetic: '[əˈpriːʃieɪt]', pos: '動詞', meaning: '感謝する、正しく理解する', example: 'I really appreciate your help.', translation: 'あなたの助けに本当に感謝しています。' }
+    ],
+    it: [
+      { word: 'Armonia', phonetic: '[armoˈniːa]', pos: '名詞', meaning: '調和', example: 'Vivere in armonia con tutti.', translation: '皆と調和して生きること。' },
+      { word: 'Felicità', phonetic: '[felitʃiˈta]', pos: '名詞', meaning: '幸福、幸せ', example: 'La felicità è semplice.', translation: '幸せはシンプルです。' },
+      { word: 'Curiosità', phonetic: '[kurjoziˈta]', pos: '名詞', meaning: '好奇心', example: 'La curiosità ci aiuta a imparare.', translation: '好奇心は私たちが学ぶ助けになります。' },
+      { word: 'Coraggio', phonetic: '[koˈraddʒo]', pos: '名詞', meaning: '勇気', example: 'Serve coraggio per cambiare.', translation: '変わるには勇気が必要です。' },
+      { word: 'Gentile', phonetic: '[dʒenˈtiːle]', pos: '形容詞', meaning: '親切な、優しい', example: 'È sempre gentile con gli altri.', translation: '彼女はいつも他人に親切です。' },
+      { word: 'Imparare', phonetic: '[impaˈraːre]', pos: '動詞', meaning: '学ぶ、覚える', example: 'Mi piace imparare nuove parole.', translation: '私は新しい単語を学ぶのが好きです。' }
+    ],
+    fr: [
+      { word: 'Voyage', phonetic: '[vwaˈjaʒ]', pos: '名詞', meaning: '旅行、旅', example: 'Le voyage était magnifique.', translation: 'その旅行は素晴らしかった。' },
+      { word: 'Curiosité', phonetic: '[kyʁjozite]', pos: '名詞', meaning: '好奇心', example: 'La curiosité ouvre de nouvelles portes.', translation: '好奇心は新しい扉を開きます。' },
+      { word: 'Courage', phonetic: '[kuʁaʒ]', pos: '名詞', meaning: '勇気', example: 'Il faut du courage pour essayer.', translation: '挑戦するには勇気が必要です。' },
+      { word: 'Sourire', phonetic: '[suʁiʁ]', pos: '名詞・動詞', meaning: '笑顔、笑う', example: 'Son sourire me rassure.', translation: '彼女の笑顔は私を安心させます。' },
+      { word: 'Apprendre', phonetic: '[apʁɑ̃dʁ]', pos: '動詞', meaning: '学ぶ、覚える', example: 'J’aime apprendre les langues.', translation: '私は語学を学ぶのが好きです。' },
+      { word: 'Équilibre', phonetic: '[ekilibʁ]', pos: '名詞', meaning: 'バランス、均衡', example: 'Il est important de garder un bon équilibre.', translation: '良いバランスを保つことは大切です。' }
+    ],
+    es: [
+      { word: 'Amigo', phonetic: '[aˈmiɣo]', pos: '名詞', meaning: '友達', example: 'Tengo un buen amigo.', translation: '私には良い友達がいます。' },
+      { word: 'Curiosidad', phonetic: '[kuɾjo.siˈðað]', pos: '名詞', meaning: '好奇心', example: 'La curiosidad ayuda a aprender.', translation: '好奇心は学ぶ助けになります。' },
+      { word: 'Valiente', phonetic: '[baˈljente]', pos: '形容詞', meaning: '勇敢な', example: 'Ella es valiente y paciente.', translation: '彼女は勇敢で忍耐強いです。' },
+      { word: 'Esperanza', phonetic: '[espeˈɾansa]', pos: '名詞', meaning: '希望', example: 'Nunca pierdas la esperanza.', translation: '決して希望を失わないで。' },
+      { word: 'Aprender', phonetic: '[apɾenˈdeɾ]', pos: '動詞', meaning: '学ぶ', example: 'Quiero aprender algo nuevo cada día.', translation: '毎日何か新しいことを学びたいです。' },
+      { word: 'Tranquilo', phonetic: '[tɾaŋˈkilo]', pos: '形容詞', meaning: '穏やかな、落ち着いた', example: 'Este lugar es muy tranquilo.', translation: 'この場所はとても穏やかです。' }
+    ],
+    ar: [
+      { word: 'Salam', phonetic: '[saˈlaːm]', pos: '名詞', meaning: '平和', example: 'السلام هو الهدف.', translation: '平和が目標です。' },
+      { word: 'Amal', phonetic: '[ʔaˈmal]', pos: '名詞', meaning: '希望', example: 'الأمل مهم في الحياة.', translation: '希望は人生で大切です。' },
+      { word: 'Hob', phonetic: '[ħubb]', pos: '名詞', meaning: '愛', example: 'الحب يجعل الحياة أجمل.', translation: '愛は人生をより美しくします。' },
+      { word: 'Sabr', phonetic: '[sˤabr]', pos: '名詞', meaning: '忍耐', example: 'الصبر يساعدنا على النجاح.', translation: '忍耐は成功する助けになります。' },
+      { word: 'Taallum', phonetic: '[taʕalˈlum]', pos: '名詞', meaning: '学習', example: 'التعلم رحلة مستمرة.', translation: '学びは継続する旅です。' },
+      { word: 'Najah', phonetic: '[naˈdʒaːħ]', pos: '名詞', meaning: '成功', example: 'النجاح يحتاج إلى عمل.', translation: '成功には努力が必要です。' }
+    ],
+    ko: [
+      { word: '행복', phonetic: '[haeng-bok]', pos: '名詞', meaning: '幸福、幸せ', example: '행복은 가까이에 있어요.', translation: '幸せは身近にあります。' },
+      { word: '용기', phonetic: '[yong-gi]', pos: '名詞', meaning: '勇気', example: '새로운 일을 시작하려면 용기가 필요해요.', translation: '新しいことを始めるには勇気が必要です。' },
+      { word: '호기심', phonetic: '[ho-gi-sim]', pos: '名詞', meaning: '好奇心', example: '호기심은 배움의 시작이에요.', translation: '好奇心は学びの始まりです。' },
+      { word: '희망', phonetic: '[hwi-mang]', pos: '名詞', meaning: '希望', example: '희망을 잃지 마세요.', translation: '希望を失わないでください。' },
+      { word: '배우다', phonetic: '[bae-u-da]', pos: '動詞', meaning: '学ぶ', example: '매일 새로운 것을 배워요.', translation: '毎日新しいことを学びます。' },
+      { word: '친절하다', phonetic: '[chin-jeol-ha-da]', pos: '形容詞', meaning: '親切だ、優しい', example: '그분은 정말 친절해요.', translation: 'その方は本当に親切です。' }
+    ],
+    zh: [
+      { word: '努力', phonetic: '[nǔlì]', pos: '動詞・名詞', meaning: '努力する、励む', example: '我们一起努力吧。', translation: '一緒に努力しましょう。' },
+      { word: '好奇', phonetic: '[hàoqí]', pos: '形容詞', meaning: '好奇心がある、興味を持つ', example: '我对语言学习很好奇。', translation: '私は語学学習にとても興味があります。' },
+      { word: '勇气', phonetic: '[yǒngqì]', pos: '名詞', meaning: '勇気', example: '面对困难需要勇气。', translation: '困難に向き合うには勇気が必要です。' },
+      { word: '希望', phonetic: '[xīwàng]', pos: '名詞・動詞', meaning: '希望、望む', example: '我希望每天进步一点。', translation: '毎日少しずつ進歩したいです。' },
+      { word: '学习', phonetic: '[xuéxí]', pos: '動詞・名詞', meaning: '学ぶ、学習', example: '学习语言很有趣。', translation: '言語を学ぶのは楽しいです。' },
+      { word: '耐心', phonetic: '[nàixīn]', pos: '名詞', meaning: '忍耐、辛抱強さ', example: '学习需要耐心。', translation: '学習には忍耐が必要です。' }
+    ]
+,
+    vi: [
+      { word: 'Cố gắng', phonetic: '[ko˧˥ zaŋ˧˥]', pos: '動詞', meaning: '努力する、頑張る', example: 'Tôi sẽ cố gắng học mỗi ngày.', translation: '私は毎日頑張って勉強します。' },
+      { word: 'Hy vọng', phonetic: '[hi˧˧ vɔŋ˧˧]', pos: '名詞・動詞', meaning: '希望、望む', example: 'Tôi hy vọng bạn khỏe.', translation: 'あなたが元気であることを願っています。' },
+      { word: 'Kiên nhẫn', phonetic: '[kiən˧˧ ɲən˧˥]', pos: '形容詞', meaning: '忍耐強い、辛抱強い', example: 'Học ngoại ngữ cần kiên nhẫn.', translation: '外国語の学習には忍耐が必要です。' },
+      { word: 'Vui vẻ', phonetic: '[vuj˧˧ ve˧˩]', pos: '形容詞', meaning: '楽しい、陽気な', example: 'Chúc bạn một ngày vui vẻ!', translation: '楽しい一日をお過ごしください！' },
+      { word: 'Thân thiện', phonetic: '[tʰən˧˧ tiən˧˥]', pos: '形容詞', meaning: '親しみやすい、友好的な', example: 'Cô ấy rất thân thiện.', translation: '彼女はとても親しみやすいです。' },
+      { word: 'Học hỏi', phonetic: '[hɔk̚˦˥ hɔj˧˩]', pos: '動詞', meaning: '学ぶ、学び取る', example: 'Tôi thích học hỏi điều mới.', translation: '私は新しいことを学ぶのが好きです。' }
+    ],
+    de: [
+      { word: 'Neugier', phonetic: '[ˈnɔʏ̯ɡiːɐ̯]', pos: '名詞', meaning: '好奇心', example: 'Kinder haben eine natürliche Neugier.', translation: '子どもたちは自然な好奇心を持っています。' },
+      { word: 'Fleißig', phonetic: '[ˈflaɪ̯sɪç]', pos: '形容詞', meaning: '勤勉な、一生懸命な', example: 'Sie ist eine fleißige Schülerin.', translation: '彼女は勤勉な生徒です。' },
+      { word: 'Mut', phonetic: '[muːt]', pos: '名詞', meaning: '勇気', example: 'Man braucht Mut für Veränderungen.', translation: '変化には勇気が必要です。' },
+      { word: 'Lernen', phonetic: '[ˈlɛʁnən]', pos: '動詞', meaning: '学ぶ、勉強する', example: 'Ich lerne jeden Tag Deutsch.', translation: '私は毎日ドイツ語を勉強します。' },
+      { word: 'Freude', phonetic: '[ˈfʁɔʏ̯də]', pos: '名詞', meaning: '喜び、楽しさ', example: 'Lernen macht mir Freude.', translation: '学ぶことは私に喜びを与えてくれます。' },
+      { word: 'Hoffnung', phonetic: '[ˈhɔfˌnʊŋ]', pos: '名詞', meaning: '希望', example: 'Ich habe Hoffnung für die Zukunft.', translation: '私は未来に希望を持っています。' }
+    ]
+  };
+
+  const holidayNames = {
+    '2026-01-01': '元日',
+    '2026-02-11': '建国記念の日',
+    '2026-02-23': '天皇誕生日',
+    '2026-03-20': '春分の日',
+    '2026-04-29': '昭和の日',
+    '2026-05-03': '憲法記念日',
+    '2026-05-04': 'みどりの日',
+    '2026-05-05': 'こどもの日',
+    '2026-07-20': '海の日',
+    '2026-08-11': '山の日',
+    '2026-09-21': '敬老の日',
+    '2026-09-22': '秋分の日',
+    '2026-10-12': 'スポーツの日',
+    '2026-11-03': '文化の日',
+    '2026-11-23': '勤労感謝の日'
+  };
+
+  let iconModalTarget = null;
+  let selectedStudyRecordCheckIdForDelete = null;
+  let selectedScheduleIdForDelete = null;
+  let selectedStockIdForDelete = null;
+  // 語学学習カードの現在位置。開くたびに最初の位置だけランダムになります。
+  const langCardIndices = {};
+
+  // Gemini APIで生成した語学カードの履歴。
+  // 端末内でのみ保持し、前の単語へ戻れるようにします。
+  const aiWordHistory = {};
+  const aiWordPositions = {};
+  const aiWordLoading = {};
+  const CEFR_LEVELS = ['A1','A2','B1','B2','C1','C2'];
+  const weatherCodeIcons = {
+    0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'
+  };
+
+  // =========================================================
+  // AI語学学習：Gemini / OpenAI / Claude / DeepSeek
+  // APIキーはHTMLへ直接書き込まず、ブラウザのlocalStorageに保存します。
+  // =========================================================
+  const AI_PROVIDER_DEFAULTS = {
+    gemini: {
+      name: 'Gemini',
+      keyStorage: 'my_calendar_gemini_api_key',
+      modelStorage: 'my_calendar_gemini_model',
+      model: 'gemini-2.5-flash',
+      help: 'Google AI StudioでGemini APIキーを取得します。利用可能なモデルは各AIサービスのAPIから確認できます。'
+    },
+    openai: {
+      name: 'OpenAI',
+      keyStorage: 'my_calendar_openai_api_key',
+      modelStorage: 'my_calendar_openai_model',
+      model: 'gpt-4o-mini',
+      help: 'OpenAI PlatformでAPIキーを取得します。'
+    },
+    anthropic: {
+      name: 'Claude',
+      keyStorage: 'my_calendar_anthropic_api_key',
+      modelStorage: 'my_calendar_anthropic_model',
+      model: 'claude-3-5-haiku-latest',
+      help: 'Anthropic ConsoleでAPIキーを取得します。'
+    },
+    deepseek: {
+      name: 'DeepSeek',
+      keyStorage: 'my_calendar_deepseek_api_key',
+      modelStorage: 'my_calendar_deepseek_model',
+      model: 'deepseek-chat',
+      help: 'DeepSeek PlatformでAPIキーを取得します。'
+    }
+  };
+
+  function getSelectedAiProvider() {
+    try { return localStorage.getItem('my_calendar_ai_provider') || 'gemini'; } catch(e) { return 'gemini'; }
+  }
+
+  function getAiApiKey(provider = getSelectedAiProvider()) {
+    const cfg = AI_PROVIDER_DEFAULTS[provider] || AI_PROVIDER_DEFAULTS.gemini;
+    try { return localStorage.getItem(cfg.keyStorage) || ''; } catch(e) { return ''; }
+  }
+
+  function getAiModel(provider = getSelectedAiProvider()) {
+    const cfg = AI_PROVIDER_DEFAULTS[provider] || AI_PROVIDER_DEFAULTS.gemini;
+    try {
+      const stored = localStorage.getItem(cfg.modelStorage) || '';
+      // 保存済みモデルはまず候補として使用し、実際に利用できなければ
+      // fetchAiWord() がAPIの現在のモデル一覧から自動選択します。
+      return stored || cfg.model;
+    } catch(e) { return cfg.model; }
+  }
+
+  function saveAiProviderSettings() {
+    const provider = document.getElementById('aiProviderSelect')?.value || 'gemini';
+    const key = document.getElementById('aiApiKeyInput')?.value.trim() || '';
+    const model = document.getElementById('aiModelInput')?.value.trim() || '';
+    const cfg = AI_PROVIDER_DEFAULTS[provider];
+
+    if (!key) {
+      alert(`${cfg.name}のAPIキーを入力してください。`);
+      return;
+    }
+    try {
+      localStorage.setItem('my_calendar_ai_provider', provider);
+      localStorage.setItem(cfg.keyStorage, key);
+      localStorage.setItem(cfg.modelStorage, model || cfg.model);
+      updateSettingsUI();
+      alert(`${cfg.name}のAPI設定をこの端末のブラウザに保存しました。`);
+    } catch(e) {
+      alert('API設定を保存できませんでした。');
+    }
+  }
+
+  function clearAiProviderKey() {
+    const provider = document.getElementById('aiProviderSelect')?.value || 'gemini';
+    const cfg = AI_PROVIDER_DEFAULTS[provider];
+    try {
+      localStorage.removeItem(cfg.keyStorage);
+      document.getElementById('aiApiKeyInput').value = '';
+      updateSettingsUI();
+      alert(`${cfg.name}のAPIキーをこの端末から消去しました。`);
+    } catch(e) {}
+  }
+
+  // 旧バージョンとの互換性：既存のGeminiキーはそのまま利用できます。
+  function getGeminiApiKey() {
+    return getAiApiKey('gemini');
+  }
+
+  function saveGeminiApiKey() {
+    const input = document.getElementById('aiApiKeyInput');
+    if (!input) return;
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (providerSelect) providerSelect.value = 'gemini';
+    saveAiProviderSettings();
+  }
+
+  function normalizeAiJsonItem(item) {
+    if (!item || !item.word || !item.example || !item.translation || !item.meaning) {
+      throw new Error('AIの単語データが不完全です。');
+    }
+    return {
+      word: String(item.word).trim(),
+      phonetic: String(item.phonetic || ''),
+      pos: String(item.pos || ''),
+      meaning: String(item.meaning).trim(),
+      example: String(item.example).trim(),
+      translation: String(item.translation).trim(),
+      level: String(item.level || '').trim()
+    };
+  }
+
+  const languageNamesForAI = {
+    en: '英語', it: 'イタリア語', fr: 'フランス語', es: 'スペイン語',
+    ar: 'アラビア語', ko: '韓国語', zh: '中国語', vi: 'ベトナム語', de: 'ドイツ語'
+  };
+
+  function buildAiPrompt(langCode) {
+    const languageName = languageNamesForAI[langCode] || langCode;
+    const history = Array.isArray(aiWordHistory[langCode])
+      ? aiWordHistory[langCode].slice(-30).map(item => item.word).filter(Boolean)
+      : [];
+    const level = CEFR_LEVELS[(aiWordHistory[langCode]?.length || 0) % CEFR_LEVELS.length];
+
+    return `
+あなたは${languageName}のネイティブ語学教師です。
+日本語話者向けに、${languageName}の新しい単語を1つだけ選んでください。
+今回の学習レベルはCEFR ${level}です。${level}として適切な語彙・用法を選んでください。
+A1（入門）からC2（最上級）まで順番に幅広く学べるようにするため、ページごとにレベルを変えます。
+前回までに出した単語は避けてください。単なる基本語の繰り返しではなく、${level}にふさわしい自然で有用な語彙を選んでください。
+単語、IPA発音記号、品詞、日本語の意味、自然な例文、その日本語訳を作成してください。
+
+以前に出した単語:
+${history.length ? history.join(', ') : 'なし'}
+
+必ずJSONだけを返してください。Markdownのコードブロックは不要です。
+{
+  "word": "単語",
+  "phonetic": "IPA発音記号",
+  "pos": "品詞",
+  "meaning": "日本語の意味",
+  "example": "自然な例文",
+  "translation": "例文の日本語訳",
+  "level": "${level}"
+}
+`;
+  }
+
+  function parseAiJsonText(text) {
+    const cleaned = String(text || '')
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    // 返答の前後に説明文が付いた場合にもJSON部分を拾います。
+    try {
+      return JSON.parse(cleaned);
+    } catch(e) {
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (!match) throw e;
+      return JSON.parse(match[0]);
+    }
+  }
+
+  // 各AIサービスの「現在利用できるモデル」をAPIから取得します。
+  // モデル名をHTMLに固定し続けないための共通機能です。
+  async function getAvailableAiModels(provider, apiKey) {
+    if (!apiKey) return [];
+    try {
+      if (provider === 'gemini') {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.models || [])
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => String(m.name || '').replace(/^models\//, ''))
+          .filter(Boolean);
+      }
+
+      if (provider === 'openai') {
+        const response = await fetch('https://api.openai.com/v1/models', {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.data || [])
+          .map(m => String(m.id || ''))
+          .filter(Boolean)
+          .filter(id => /gpt|o[1-9]|chatgpt/i.test(id));
+      }
+
+      if (provider === 'anthropic') {
+        const response = await fetch('https://api.anthropic.com/v1/models', {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          }
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.data || [])
+          .map(m => String(m.id || ''))
+          .filter(Boolean);
+      }
+
+      if (provider === 'deepseek') {
+        const response = await fetch('https://api.deepseek.com/models', {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.data || [])
+          .map(m => String(m.id || ''))
+          .filter(Boolean);
+      }
+    } catch (e) {
+      console.warn(`${provider}モデル一覧の取得に失敗:`, e);
+    }
+    return [];
+  }
+
+  function chooseBestAiModel(provider, models) {
+    if (!Array.isArray(models) || !models.length) return null;
+    const current = getAiModel(provider);
+
+    // 現在のモデルが実際にAPIから返ってきたなら、それを優先します。
+    if (models.includes(current)) return current;
+
+    // サービスごとに、汎用的なチャット/高速モデルを優先します。
+    const preferredPatterns = {
+      gemini: [/flash/i, /pro/i],
+      openai: [/^gpt-5/i, /^gpt-4\.1/i, /^gpt-4o/i, /^o[1-9]/i],
+      anthropic: [/sonnet/i, /haiku/i, /opus/i],
+      deepseek: [/deepseek-chat/i, /deepseek-reasoner/i]
+    };
+
+    const patterns = preferredPatterns[provider] || [];
+    for (const pattern of patterns) {
+      const found = models.find(id => pattern.test(id));
+      if (found) return found;
+    }
+    return models[0];
+  }
+
+  async function refreshCurrentAiModel() {
+    const provider = document.getElementById('aiProviderSelect')?.value || getSelectedAiProvider();
+    const key = getAiApiKey(provider) || document.getElementById('aiApiKeyInput')?.value.trim() || '';
+    if (!key) {
+      alert(`${AI_PROVIDER_DEFAULTS[provider]?.name || provider}のAPIキーを先に入力してください。`);
+      return;
+    }
+
+    const models = await getAvailableAiModels(provider, key);
+    if (!models.length) {
+      alert(`${AI_PROVIDER_DEFAULTS[provider]?.name || provider}から利用可能なモデル一覧を取得できませんでした。\nAPIキー・通信状態・ブラウザからのAPIアクセス許可を確認してください。`);
+      return;
+    }
+
+    const model = chooseBestAiModel(provider, models);
+    if (!model) return;
+
+    const cfg = AI_PROVIDER_DEFAULTS[provider];
+    localStorage.setItem('my_calendar_ai_provider', provider);
+    localStorage.setItem(cfg.keyStorage, key);
+    localStorage.setItem(cfg.modelStorage, model);
+
+    const input = document.getElementById('aiModelInput');
+    if (input) input.value = model;
+    updateAiProviderUI();
+
+    alert(`${cfg.name}の現在利用可能なモデルを確認しました。\n\n使用モデル：${model}\n\n利用可能モデル：${models.length}種類`);
+  }
+
+  async function getAvailableGeminiModel(apiKey) {
+    if (!apiKey) return null;
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      const models = Array.isArray(data?.models) ? data.models : [];
+      const usable = models.filter(m =>
+        Array.isArray(m.supportedGenerationMethods) &&
+        m.supportedGenerationMethods.includes('generateContent')
+      );
+      if (!usable.length) return null;
+
+      // まず現在保存されているモデルを試し、使えなければ
+      // APIが実際に返した「generateContent対応モデル」から自動選択します。
+      const saved = getAiModel('gemini');
+      const savedId = String(saved || '').replace(/^models\//, '');
+      const savedModel = usable.find(m => String(m.name || '').replace(/^models\//, '') === savedId);
+      if (savedModel) return String(savedModel.name).replace(/^models\//, '');
+
+      // 新しめのFlash系を優先。特定のバージョン名を決め打ちしません。
+      const flashModels = usable.filter(m => /flash/i.test(String(m.name || '')));
+      flashModels.sort((a,b) => String(b.name || '').localeCompare(String(a.name || ''), undefined, {numeric:true}));
+      if (flashModels.length) return String(flashModels[0].name).replace(/^models\//, '');
+
+      return String(usable[0].name || '').replace(/^models\//, '') || null;
+    } catch (e) {
+      console.warn('Geminiモデル一覧の取得に失敗:', e);
+      return null;
+    }
+  }
+
+  async function fetchGeminiWordWithModel(langCode, model, apiKey) {
+    const prompt = buildAiPrompt(langCode);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.9, responseMimeType: 'application/json' }
+      })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let detail = errorText;
+      try {
+        const errorJson = JSON.parse(errorText);
+        detail = errorJson?.error?.message || errorJson?.error?.status || errorText;
+      } catch (e) {}
+      const err = new Error(`Gemini APIエラー ${response.status}\n${detail}`);
+      err.status = response.status;
+      throw err;
+    }
+    const data = await response.json();
+    const resultText = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
+    return normalizeAiJsonItem(parseAiJsonText(resultText));
+  }
+
+  async function fetchGeminiWord(langCode) {
+    const apiKey = getAiApiKey('gemini');
+    if (!apiKey) return null;
+
+    let model = getAiModel('gemini');
+    try {
+      // 保存されているモデル名が古い／誤入力でも、APIが現在利用可能なモデルを自動探索します。
+      const availableModel = await getAvailableGeminiModel(apiKey);
+      if (availableModel && availableModel !== model) {
+        model = availableModel;
+        localStorage.setItem('my_calendar_gemini_model', model);
+        const modelInput = document.getElementById('aiModelInput');
+        if (modelInput) modelInput.value = model;
+      }
+    } catch (e) {}
+
+    try {
+      return await fetchGeminiWordWithModel(langCode, model, apiKey);
+    } catch (firstError) {
+      // 保存モデルで失敗した場合は、APIが返した利用可能モデルをもう一度探索して再試行。
+      const fallbackModel = await getAvailableGeminiModel(apiKey);
+      if (fallbackModel && fallbackModel !== model) {
+        localStorage.setItem('my_calendar_gemini_model', fallbackModel);
+        const modelInput = document.getElementById('aiModelInput');
+        if (modelInput) modelInput.value = fallbackModel;
+        return await fetchGeminiWordWithModel(langCode, fallbackModel, apiKey);
+      }
+      throw firstError;
+    }
+  }
+
+  async function fetchOpenAiWord(langCode) {
+    const apiKey = getAiApiKey('openai');
+    if (!apiKey) return null;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: getAiModel('openai'),
+        temperature: 0.9,
+        messages: [
+          { role: 'system', content: 'You are a native foreign-language teacher. Return only valid JSON.' },
+          { role: 'user', content: buildAiPrompt(langCode) }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const resultText = data?.choices?.[0]?.message?.content || '';
+    return normalizeAiJsonItem(parseAiJsonText(resultText));
+  }
+
+  async function fetchAnthropicWord(langCode) {
+    const apiKey = getAiApiKey('anthropic');
+    if (!apiKey) return null;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: getAiModel('anthropic'),
+        max_tokens: 700,
+        temperature: 0.9,
+        system: 'You are a native foreign-language teacher. Return only valid JSON.',
+        messages: [{ role: 'user', content: buildAiPrompt(langCode) }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Anthropic API error:', response.status, errorText);
+      throw new Error(`Claude API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const resultText = data?.content?.map(x => x.text || '').join('').trim() || '';
+    return normalizeAiJsonItem(parseAiJsonText(resultText));
+  }
+
+  async function fetchDeepSeekWord(langCode) {
+    const apiKey = getAiApiKey('deepseek');
+    if (!apiKey) return null;
+
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: getAiModel('deepseek'),
+        temperature: 0.9,
+        messages: [
+          { role: 'system', content: 'You are a native foreign-language teacher. Return only valid JSON.' },
+          { role: 'user', content: buildAiPrompt(langCode) }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('DeepSeek API error:', response.status, errorText);
+      throw new Error(`DeepSeek API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const resultText = data?.choices?.[0]?.message?.content || '';
+    return normalizeAiJsonItem(parseAiJsonText(resultText));
+  }
+
+  async function fetchAiWordWithCurrentModel(langCode, provider, model) {
+    const cfg = AI_PROVIDER_DEFAULTS[provider];
+    const originalModel = localStorage.getItem(cfg.modelStorage) || '';
+    localStorage.setItem(cfg.modelStorage, model);
+    try {
+      if (provider === 'openai') return await fetchOpenAiWord(langCode);
+      if (provider === 'anthropic') return await fetchAnthropicWord(langCode);
+      if (provider === 'deepseek') return await fetchDeepSeekWord(langCode);
+      return await fetchGeminiWord(langCode);
+    } catch (e) {
+      // 失敗したモデルを次の候補で再試行するため、元の設定を戻します。
+      if (originalModel) localStorage.setItem(cfg.modelStorage, originalModel);
+      else localStorage.removeItem(cfg.modelStorage);
+      throw e;
+    }
+  }
+
+  function sortAiModelCandidates(provider, models) {
+    const unique = [...new Set((models || []).map(String).filter(Boolean))];
+    const patterns = {
+      gemini: [
+        /flash.*latest/i, /flash/i, /pro.*latest/i, /pro/i
+      ],
+      openai: [
+        /^gpt-5/i, /^gpt-4\.1/i, /^gpt-4o/i, /^o[1-9]/i
+      ],
+      anthropic: [
+        /sonnet/i, /haiku/i, /opus/i
+      ],
+      deepseek: [
+        /deepseek-chat/i, /deepseek-reasoner/i
+      ]
+    };
+    const pats = patterns[provider] || [];
+    const score = id => {
+      let s = 0;
+      pats.forEach((p, i) => { if (p.test(id)) s += (pats.length - i) * 100; });
+      // 古い preview/experimental は後回し
+      if (/preview|experimental|exp/i.test(id)) s -= 20;
+      return s;
+    };
+    return unique.sort((a,b) => score(b) - score(a));
+  }
+
+  async function fetchAiWord(langCode) {
+    const provider = getSelectedAiProvider();
+    const apiKey = getAiApiKey(provider);
+    if (!apiKey) return null;
+
+    const current = getAiModel(provider);
+    let candidates = [current];
+
+    // 現在のAPIが提供しているモデルを取得して、モデル更新にも追従します。
+    const available = await getAvailableAiModels(provider, apiKey);
+    if (available.length) {
+      candidates = sortAiModelCandidates(provider, [current, ...available]);
+
+      // 語学用途では、テキスト生成に使える一般向けモデルだけを優先します。
+      if (provider === 'gemini') {
+        candidates = candidates.filter(id =>
+          !/embedding|image|vision|audio|tts|robotics|computer/i.test(id)
+        );
+      }
+    }
+
+    // 最大6モデルまで試します。最初に成功したモデルを今後の標準モデルにします。
+    let lastError = null;
+    for (const model of candidates.slice(0, 6)) {
+      try {
+        const item = await fetchAiWordWithCurrentModel(langCode, provider, model);
+        if (item) {
+          localStorage.setItem(AI_PROVIDER_DEFAULTS[provider].modelStorage, model);
+          const input = document.getElementById('aiModelInput');
+          if (input) input.value = model;
+          return item;
+        }
+      } catch (e) {
+        lastError = e;
+        console.warn(`${provider} model ${model} failed:`, e);
+      }
+    }
+
+    throw lastError || new Error('現在利用できるAIモデルで単語を取得できませんでした。');
+  }
+
+  async function generateAiWord(langCode, direction = 'next') {
+    if (!Array.isArray(aiWordHistory[langCode])) aiWordHistory[langCode] = [];
+    if (!Number.isInteger(aiWordPositions[langCode])) aiWordPositions[langCode] = -1;
+
+    // まず保存済みのページをめくる。APIを再度呼びません。
+    if (direction === 'prev') {
+      if (aiWordPositions[langCode] > 0) {
+        aiWordPositions[langCode]--;
+        saveLanguageHistory();
+        renderLangCards();
+      }
+      return;
+    }
+    if (aiWordPositions[langCode] < aiWordHistory[langCode].length - 1) {
+      aiWordPositions[langCode]++;
+      saveLanguageHistory();
+      renderLangCards();
+      return;
+    }
+
+    const provider = getSelectedAiProvider();
+    const apiKey = getAiApiKey(provider);
+    if (!apiKey) {
+      const list = languageDatabase[langCode] || [];
+      if (!list.length) return;
+      if (!Number.isInteger(langCardIndices[langCode])) langCardIndices[langCode] = 0;
+      langCardIndices[langCode] = (langCardIndices[langCode] + 1) % list.length;
+      renderLangCards();
+      return;
+    }
+    if (aiWordLoading[langCode]) return;
+
+    aiWordLoading[langCode] = true;
+    renderLangCards();
+    try {
+      let item = null;
+      for (let retry = 0; retry < 5; retry++) {
+        const candidate = await fetchAiWord(langCode);
+        if (!candidate) break;
+        const candidateWord = String(candidate.word || '').trim().toLowerCase();
+        const duplicate = aiWordHistory[langCode].some(old => String(old.word || '').trim().toLowerCase() === candidateWord);
+        if (!duplicate) { item = candidate; break; }
+      }
+      if (!item) throw new Error('新しい単語を取得できませんでした。もう一度「次のページ」を押してください。');
+      aiWordHistory[langCode].push(item);
+      // 端末内履歴は十分な量を保持しつつ、localStorageが肥大化しすぎないようにします。
+      if (aiWordHistory[langCode].length > 500) aiWordHistory[langCode].shift();
+      aiWordPositions[langCode] = aiWordHistory[langCode].length - 1;
+      saveLanguageHistory();
+    } catch (e) {
+      console.error('AI word retrieval failed:', e);
+      alert(`${AI_PROVIDER_DEFAULTS[provider]?.name || 'AI'}から新しい単語を取得できませんでした。\n\n${e?.message || e}`);
+    } finally {
+      aiWordLoading[langCode] = false;
+      renderLangCards();
+    }
+  }
+
+  function saveLanguageHistory() {
+    try {
+      const payload = {};
+      Object.keys(aiWordHistory).forEach(code => {
+        if (Array.isArray(aiWordHistory[code])) payload[code] = aiWordHistory[code];
+      });
+      localStorage.setItem('my_calendar_language_history_v1', JSON.stringify(payload));
+      localStorage.setItem('my_calendar_language_positions_v1', JSON.stringify(aiWordPositions));
+    } catch(e) {}
+  }
+
+  function loadLanguageHistory() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('my_calendar_language_history_v1') || '{}');
+      const pos = JSON.parse(localStorage.getItem('my_calendar_language_positions_v1') || '{}');
+      Object.keys(raw).forEach(code => { if (Array.isArray(raw[code])) aiWordHistory[code] = raw[code].slice(-500); });
+      Object.keys(pos).forEach(code => { if (Number.isInteger(pos[code])) aiWordPositions[code] = pos[code]; });
+    } catch(e) {}
+  }
+
+  async function refreshAiWordsForSelectedLanguages() {
+    const key = getAiApiKey(getSelectedAiProvider());
+    if (!key) return;
+    for (const langCode of appData.selectedLangs.slice(0, 2)) {
+      if (!Array.isArray(aiWordHistory[langCode])) aiWordHistory[langCode] = [];
+      if (aiWordHistory[langCode].length === 0) {
+        aiWordPositions[langCode] = -1;
+        try {
+          await generateAiWord(langCode, 'next');
+        } catch (e) {
+          console.warn('初回AI単語取得をスキップ:', langCode, e);
+        }
+      } else if (!Number.isInteger(aiWordPositions[langCode]) || aiWordPositions[langCode] < 0) {
+        aiWordPositions[langCode] = aiWordHistory[langCode].length - 1;
+      }
+    }
+    saveLanguageHistory();
+    renderLangCards();
+  }
+
+  window.onload = function() {
+    loadLocalStorage();
+    loadLanguageHistory();
+
+    // アプリを開いた日は、通常カレンダーを必ずその日の週・月から開始します。
+    currentDate = getTodayDateObject();
+    currentWeekOffset = 0;
+    studyCurrentDate = getTodayDateObject();
+
+    applyTheme(appData.theme);
+    updateSettingsUI();
+    updateNotificationSoundUI();
+    renderCalendar();
+    // 初回レイアウト確定後にも一度だけ再描画して、
+    // 一週間モードの曜日下の7日分の書き込み欄を確実に表示します。
+    requestAnimationFrame(() => renderCalendar());
+    fetchWeatherForecast();
+    initTimerCategorySelect();
+    renderRegisteredSubjects();
+    updateStudyIconButton();
+    updateCustomIconButton('noteIconBtn', appData.customIcons['note'] || '📌');
+    updateCustomIconButton('popupNoteIconBtn', appData.customIcons['popupNote'] || '📌');
+    updateTimerSelectedStudyHint();
+    checkScheduledNotifications();
+    setInterval(checkScheduledNotifications, 30000);
+  };
+
+  function saveLocalStorage() {
+    try { localStorage.setItem('my_calendar_app_data_v41', JSON.stringify(appData)); } catch(e) {}
+  }
+  function loadLocalStorage() {
+    try {
+      const saved = localStorage.getItem('my_calendar_app_data_v41');
+      if (saved) appData = JSON.parse(saved);
+      if (!appData.studyRecords) appData.studyRecords = {};
+      if (!appData.customIcons || typeof appData.customIcons !== 'object') appData.customIcons = {};
+      if (!Array.isArray(appData.userPresetIcons)) appData.userPresetIcons = [];
+      if (!appData.subjectIcons || typeof appData.subjectIcons !== 'object') appData.subjectIcons = {};
+      if (typeof appData.selectedCategory !== 'string') appData.selectedCategory = '';
+      // 登録済みの学習内容を優先して、再読み込み後も同じ学習内容を選択します。
+      if (appData.selectedCategory && appData.subjectIcons[appData.selectedCategory]) {
+        selectedCategory = appData.selectedCategory;
+      } else {
+        const registeredNames = Object.keys(appData.subjectIcons);
+        selectedCategory = registeredNames.length ? registeredNames[0] : '英語学習';
+        appData.selectedCategory = selectedCategory;
+      }
+      if (!appData.weatherLocation || typeof appData.weatherLocation !== 'object') appData.weatherLocation = { name:'現在地', latitude:null, longitude:null };
+      if (!appData.weatherForecast || typeof appData.weatherForecast !== 'object') appData.weatherForecast = {};
+      // 旧データで学習記録にアイコンが保存されていない場合だけ、現在の学習アイコンを補います。
+      // 既に保存されているアイコンは変更しません。
+      const savedStudyIcon = appData.customIcons['study'] || '🏆';
+      Object.keys(appData.studyRecords).forEach(dateKey => {
+        if (!Array.isArray(appData.studyRecords[dateKey])) return;
+        appData.studyRecords[dateKey].forEach(record => {
+          if (!record.icon) record.icon = savedStudyIcon;
+          if (record.category && record.icon && record.icon !== '🏆' && !appData.subjectIcons[record.category]) {
+            appData.subjectIcons[record.category] = record.icon;
+          }
+        });
+      });
+      if (!Array.isArray(appData.selectedLangs)) appData.selectedLangs = ['en', 'it'];
+      // 語学は最大2言語まで。旧バージョンで3言語以上保存されていても最初の2言語だけを引き継ぐ。
+      appData.selectedLangs = appData.selectedLangs.filter(code => languageDatabase[code]).slice(0, 2);
+      if (appData.selectedLangs.length === 0) appData.selectedLangs = ['en', 'it'];
+      saveLocalStorage();
+    } catch(e) {}
+  }
+
+  function applyTheme(themeName) {
+    const root = document.documentElement;
+    let mainBg = '#fff0f5', mainBorder = '#ffb7c5', mainColor = '#d87093', btnBg = '#ff94a4';
+    if (themeName === 'mint') { mainBg = '#f2fbf5'; mainBorder = '#a8d8b9'; mainColor = '#27ae60'; btnBg = '#2ecc71'; }
+    else if (themeName === 'blue') { mainBg = '#e8f4f8'; mainBorder = '#90caf9'; mainColor = '#2980b9'; btnBg = '#3498db'; }
+    else if (themeName === 'lavender') { mainBg = '#f3e5f5'; mainBorder = '#ce93d8'; mainColor = '#8e44ad'; btnBg = '#9b59b6'; }
+    else if (themeName === 'yellow') { mainBg = '#fffde7'; mainBorder = '#ffe082'; mainColor = '#f39c12'; btnBg = '#f1c40f'; }
+    else if (themeName === 'gray') { mainBg = '#f5f5f5'; mainBorder = '#cccccc'; mainColor = '#7f8c8d'; btnBg = '#95a5a6'; }
+    else if (themeName === 'black') { mainBg = '#2c3e50'; mainBorder = '#34495e'; mainColor = '#ecf0f1'; btnBg = '#7f8c8d'; }
+    root.style.setProperty('--main-bg', mainBg);
+    root.style.setProperty('--main-border', mainBorder);
+    root.style.setProperty('--main-color', mainColor);
+    root.style.setProperty('--btn-bg', btnBg);
+  }
+
+  function changeTheme(val) {
+    appData.theme = val;
+    applyTheme(val);
+    saveLocalStorage();
+  }
+
+  async function refreshGeminiModelName() {
+    const provider = document.getElementById('aiProviderSelect')?.value || getSelectedAiProvider();
+    if (provider !== 'gemini') {
+      alert('Geminiを選択しているときに使用してください。');
+      return;
+    }
+    await refreshCurrentAiModel();
+  }
+
+  function updateAiProviderUI() {
+    const provider = document.getElementById('aiProviderSelect')?.value || getSelectedAiProvider();
+    const cfg = AI_PROVIDER_DEFAULTS[provider] || AI_PROVIDER_DEFAULTS.gemini;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const modelInput = document.getElementById('aiModelInput');
+    const help = document.getElementById('aiProviderHelp');
+    const status = document.getElementById('aiApiStatus');
+
+    if (keyInput) keyInput.value = getAiApiKey(provider);
+    if (modelInput) modelInput.value = getAiModel(provider);
+    if (help) help.innerText = `🔑 ${cfg.help} 現在のモデル：${getAiModel(provider)}`;
+    if (status) {
+      status.innerText = getAiApiKey(provider)
+        ? `✅ ${cfg.name}のAPIキーがこの端末に保存されています。「語学」を開くとAIから新しい単語を取得します。`
+        : `APIキー未設定。未設定の場合は、従来の内蔵単語リストを使用します。`;
+    }
+  }
+
+  function updateSettingsUI() {
+    const themeSel = document.getElementById('themeSelect');
+    if (themeSel) themeSel.value = appData.theme;
+    document.querySelectorAll('input[name="appLang"]').forEach(box => {
+      box.checked = appData.selectedLangs.includes(box.value);
+    });
+    const weatherBox = document.getElementById('showWeatherCheckbox');
+    if (weatherBox) weatherBox.checked = appData.showWeather;
+    const weatherInput = document.getElementById('weatherLocationInput');
+    if (weatherInput) weatherInput.value = (appData.weatherLocation && appData.weatherLocation.name !== '現在地') ? (appData.weatherLocation.name || '') : '';
+    const weatherStatus = document.getElementById('weatherLocationStatus');
+    if (weatherStatus) weatherStatus.textContent = `現在の取得場所：${appData.weatherLocation?.name || '現在地'}`;
+    const rokuyoBox = document.getElementById('showRokuyoCheckbox');
+    if (rokuyoBox) rokuyoBox.checked = appData.showRokuyo;
+    const holidayBox = document.getElementById('showHolidayCheckbox');
+    if (holidayBox) holidayBox.checked = appData.showHoliday;
+    if (appData.userAvatar) document.getElementById('userAvatarImg').src = appData.userAvatar;
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (providerSelect) providerSelect.value = getSelectedAiProvider();
+    updateAiProviderUI();
+  }
+
+  function renderCalendar() {
+    const titleEl = document.getElementById('calendarHeaderTitle');
+    const container = document.getElementById('daysContainer');
+    container.innerHTML = '';
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    titleEl.innerText = `${year}年 ${month + 1}月`;
+
+    if (viewMode === 'month') {
+      document.getElementById('weekNavButtons').style.display = 'none';
+      renderMonthDays(year, month, container);
+    } else {
+      document.getElementById('weekNavButtons').style.display = 'flex';
+      renderWeekDays(container);
+    }
+  }
+
+  function renderMonthDays(year, month, container) {
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'day-cell empty';
+      container.appendChild(emptyDiv);
+    }
+    for (let d = 1; d <= lastDay; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      container.appendChild(createDayCell(dateStr, d, (firstDayIndex + d - 1) % 7));
+    }
+  }
+
+  function renderWeekDays(container) {
+    const d = new Date(currentDate);
+    const dayOfWeek = d.getDay();
+    const startOfWeek = new Date(d);
+    startOfWeek.setDate(d.getDate() - dayOfWeek + currentWeekOffset * 7);
+    for (let i = 0; i < 7; i++) {
+      const targetDate = new Date(startOfWeek);
+      targetDate.setDate(startOfWeek.getDate() + i);
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth();
+      const dayNum = targetDate.getDate();
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      container.appendChild(createDayCell(dateStr, dayNum, i));
+    }
+  }
+
+  function createDayCell(dateStr, dayNum, dayOfWeekIndex) {
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    if (dayOfWeekIndex === 0) cell.classList.add('sunday-bg');
+    else if (dayOfWeekIndex === 6) cell.classList.add('saturday-bg');
+
+    const today = new Date();
+    const isToday = today.getFullYear() === parseInt(dateStr.split('-')[0]) &&
+                    (today.getMonth() + 1) === parseInt(dateStr.split('-')[1]) &&
+                    today.getDate() === parseInt(dateStr.split('-')[2]);
+    if (isToday) cell.classList.add('today-cell');
+
+    const topRow = document.createElement('div');
+    topRow.className = 'day-top-row';
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'day-info';
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'day-num';
+    const isHol = isHoliday(dateStr);
+    if (dayOfWeekIndex === 0 || (appData.showHoliday && isHol)) numSpan.style.color = '#e74c3c';
+    else if (dayOfWeekIndex === 6) numSpan.style.color = '#3498db';
+    numSpan.innerText = dayNum;
+    infoDiv.appendChild(numSpan);
+
+    if (appData.showHoliday && isHol) {
+      const holSpan = document.createElement('span');
+      holSpan.className = 'mini-holiday-text';
+      holSpan.innerText = holidayNames[dateStr];
+      infoDiv.appendChild(holSpan);
+    } else if (appData.showRokuyo) {
+      const rokuyoSpan = document.createElement('span');
+      rokuyoSpan.className = 'rokuyo-text';
+      rokuyoSpan.innerText = getRokuyo(dateStr);
+      infoDiv.appendChild(rokuyoSpan);
+    }
+    topRow.appendChild(infoDiv);
+
+    if (appData.showWeather) {
+      const weatherSpan = document.createElement('span');
+      weatherSpan.className = 'mini-weather-icon';
+      weatherSpan.innerText = getWeatherIcon(dateStr);
+      topRow.appendChild(weatherSpan);
+    }
+    cell.appendChild(topRow);
+// 通常カレンダーの予定・メモ用4分割アイコングリッド。
+// 学習記録（studyRecords / isStudy）は通常カレンダーには表示しません。
+const notes = (appData.notes[dateStr] || []).filter(note => !note.isStudy);
+const iconGrid = document.createElement('div');
+iconGrid.className = 'icon-grid';
+
+for (let i = 0; i < 4; i++) {
+  const gridCell = document.createElement('div');
+  gridCell.className = 'icon-grid-cell';
+  if (notes[i]) {
+    const item = notes[i];
+    const icon = item.icon || '📌';
+
+    if (
+      typeof icon === 'string' &&
+      (icon.startsWith('data:image') || icon.startsWith('http'))
+    ) {
+      const img = document.createElement('img');
+      img.src = icon;
+      img.className = 'custom-icon-img';
+      gridCell.appendChild(img);
+    } else {
+      gridCell.innerText = icon;
+    }
+  }
+
+  iconGrid.appendChild(gridCell);
+}
+
+if (notes.length > 4) {
+  const badge = document.createElement('div');
+  badge.className = 'more-badge';
+  badge.innerText = `+${notes.length - 4}`;
+  iconGrid.appendChild(badge);
+}
+
+cell.appendChild(iconGrid);
+  
+
+
+
+  
+    
+
+    // メインカレンダーの日付セルをタップしたときは通常の予定入力を開く。
+    cell.onclick = function() {
+      currentSelectedDay = dateStr;
+      openDatePopupModal(dateStr);
+    };
+
+    return cell;
+  }
+
+  function openDatePopupModal(dateStr) {
+    currentSelectedDay = dateStr;
+    document.getElementById('datePopupTitle').innerText = `${dateStr}・今日の予定・日記など`;
+    document.getElementById('popupNoteInput').value = '';
+    document.getElementById('popupStartTimeHour').value = '';
+    document.getElementById('popupStartTimeMin').value = '';
+    document.getElementById('popupEndTimeHour').value = '';
+    document.getElementById('popupEndTimeMin').value = '';
+    document.getElementById('popupStartAmPm').value = 'AM';
+    document.getElementById('popupEndAmPm').value = 'AM';
+    document.querySelectorAll('input[name="popupTimeFormat"]').forEach(r => { r.checked = r.value === '24'; });
+    togglePopupTimeFormat('24');
+    const popupNotifyEnabled = document.getElementById('popupNotifyEnabled');
+    const popupNotifyWeekBefore = document.getElementById('popupNotifyWeekBefore');
+    const popupNotifyPreviousMorning = document.getElementById('popupNotifyPreviousMorning');
+    const popupNotifyCustom = document.getElementById('popupNotifyCustom');
+    const popupNotifyCustomDate = document.getElementById('popupNotifyCustomDate');
+    const popupNotifyCustomTime = document.getElementById('popupNotifyCustomTime');
+    if (popupNotifyEnabled) popupNotifyEnabled.checked = false;
+    if (popupNotifyWeekBefore) popupNotifyWeekBefore.checked = false;
+    if (popupNotifyPreviousMorning) popupNotifyPreviousMorning.checked = false;
+    if (popupNotifyCustom) popupNotifyCustom.checked = false;
+    if (popupNotifyCustomDate) popupNotifyCustomDate.value = '';
+    if (popupNotifyCustomTime) popupNotifyCustomTime.value = '';
+    renderDatePopupNotesList();
+    updateNotificationSoundUI();
+    openModal('datePopupModal');
+  }
+
+  function renderDatePopupNotesList() {
+    const notesListEl = document.getElementById('datePopupNotesList');
+    const dayNotes = appData.notes[currentSelectedDay] || [];
+    notesListEl.innerHTML = '';
+    if (dayNotes.length === 0) {
+      notesListEl.innerHTML = '<div style="color:#888; text-align:center; font-size:11px; padding:4px;">登録された予定・メモはありません</div>';
+      return;
+    }
+
+    // カスタム画像アイコン（data:image...）をinnerHTMLへ直接埋め込むと、
+    // スマホで長いデータ文字列として表示されることがあります。
+    // ここではDOM要素として画像を作り、日本語の予定・メモも安全に表示します。
+    dayNotes.forEach(n => {
+      const item = document.createElement('div');
+      item.className = 'view-note-item' + (selectedDatePopupNoteIdForDelete === n.id ? ' selected-for-delete' : '');
+      item.onclick = () => openNoteDetail(n.id);
+      item.draggable = true;
+      item.ondragstart = (e) => {
+        e.dataTransfer.setData('text/plain', n.id);
+        selectedDatePopupNoteIdForDelete = n.id;
+      };
+
+      const main = document.createElement('div');
+      main.style.flex = '1';
+
+      const header = document.createElement('div');
+      header.style.fontWeight = 'bold';
+      header.style.color = 'var(--main-color)';
+      const icon = n.icon || '📌';
+      if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http'))) {
+        const img = document.createElement('img');
+        img.src = icon;
+        img.alt = '';
+        img.style.width = '22px';
+        img.style.height = '22px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '50%';
+        img.style.verticalAlign = 'middle';
+        img.style.marginRight = '4px';
+        header.appendChild(img);
+      } else {
+        const iconText = document.createElement('span');
+        iconText.textContent = icon;
+        header.appendChild(iconText);
+      }
+      if (n.startTime) {
+        const timeText = document.createElement('span');
+        timeText.textContent = ` [${n.startTime}〜${n.endTime || ''}]`;
+        header.appendChild(timeText);
+      }
+
+      const textEl = document.createElement('div');
+      textEl.style.marginTop = '2px';
+      textEl.style.color = '#333';
+      textEl.style.whiteSpace = 'pre-wrap';
+      textEl.textContent = n.text || '';
+
+      main.appendChild(header);
+      main.appendChild(textEl);
+
+      const selectEl = document.createElement('span');
+      selectEl.style.fontSize = '10px';
+      selectEl.style.color = '#e74c3c';
+      selectEl.style.cursor = 'pointer';
+      selectEl.textContent = '選択';
+      selectEl.onclick = (e) => { e.stopPropagation(); selectDatePopupNote(n.id); };
+
+      item.appendChild(main);
+      item.appendChild(selectEl);
+      notesListEl.appendChild(item);
+    });
+  }
+
+  function openNoteDetail(noteId) {
+    let found = null;
+    let foundDate = currentSelectedDay || '';
+    Object.keys(appData.notes || {}).some(dateStr => {
+      const n = (appData.notes[dateStr] || []).find(item => item && item.id === noteId);
+      if (n) { found = n; foundDate = dateStr; return true; }
+      return false;
+    });
+    if (!found) return;
+    document.getElementById('noteDetailTitle').textContent = `${foundDate}・予定／日記`;
+    const iconBox = document.getElementById('noteDetailIcon');
+    iconBox.innerHTML = '';
+    const icon = found.icon || '📌';
+    if (typeof icon === 'string' && (/^data:image\//i.test(icon.trim()) || /^https?:\/\//i.test(icon.trim()))) {
+      const img = document.createElement('img');
+      img.src = icon.trim(); img.alt = '';
+      img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:12px;';
+      iconBox.appendChild(img);
+    } else { iconBox.textContent = icon; iconBox.style.fontSize = '38px'; }
+    document.getElementById('noteDetailTime').textContent = found.startTime ? `🕐 ${found.startTime}〜${found.endTime || ''}` : '';
+    document.getElementById('noteDetailText').textContent = found.text || '';
+    openModal('noteDetailModal');
+  }
+
+  function selectDatePopupNote(id) {
+    selectedDatePopupNoteIdForDelete = (selectedDatePopupNoteIdForDelete === id) ? null : id;
+    renderDatePopupNotesList();
+  }
+
+  function getNotificationSoundMode() {
+    try { return localStorage.getItem('my_calendar_notification_sound') || 'on'; } catch(e) { return 'on'; }
+  }
+
+  function setNotificationSoundMode(mode) {
+    try { localStorage.setItem('my_calendar_notification_sound', mode === 'off' ? 'off' : 'on'); } catch(e) {}
+  }
+
+  function updateNotificationSoundUI() {
+    const mode = getNotificationSoundMode();
+    document.querySelectorAll('input[name="notificationSoundMode"]').forEach(r => { r.checked = r.value === mode; });
+  }
+
+  // 「チャリン」ではなく、短い予定確認音をWeb Audioで生成します。
+  function playScheduleNotificationSound() {
+    if (getNotificationSoundMode() === 'off') return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.16);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.3);
+      setTimeout(() => { try { ctx.close(); } catch(e) {} }, 500);
+    } catch(e) {}
+  }
+
+  function testNotificationSound() { playScheduleNotificationSound(); }
+
+  function requestNotificationPermissionIfNeeded() {
+    if (!('Notification' in window)) {
+      alert('このブラウザは通知機能に対応していません。');
+      return false;
+    }
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') {
+      alert('ブラウザの通知が拒否されています。ブラウザ設定から通知を許可してください。');
+      return false;
+    }
+    Notification.requestPermission().then(permission => {
+      if (permission !== 'granted') alert('通知を受け取るにはブラウザの通知を許可してください。');
+    }).catch(() => {});
+    return false;
+  }
+
+  function getNotificationEventsForNote(dateStr, note) {
+    if (!note || note.isStudy || !note.notification || !note.notification.enabled) return [];
+    const events = [];
+    const startTime = note.startTime || '09:00';
+    const parts = startTime.split(':');
+    const hh = Number(parts[0]) || 9;
+    const mm = Number(parts[1]) || 0;
+    const base = new Date(`${dateStr}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
+    if (Number.isNaN(base.getTime())) return events;
+
+    if (note.notification.weekBefore) {
+      const d = new Date(base); d.setDate(d.getDate() - 7);
+      events.push({ key:'weekBefore', at:d, label:'一週間前通知' });
+    }
+    if (note.notification.previousMorning) {
+      const d = new Date(base); d.setDate(d.getDate() - 1); d.setHours(8,0,0,0);
+      events.push({ key:'previousMorning', at:d, label:'前日の朝通知' });
+    }
+    if (note.notification.customAt) {
+      const d = new Date(note.notification.customAt);
+      if (!Number.isNaN(d.getTime())) events.push({ key:'custom:' + note.notification.customAt, at:d, label:'任意通知' });
+    }
+    return events;
+  }
+
+  function checkScheduledNotifications() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = Date.now();
+    let changed = false;
+    Object.keys(appData.notes || {}).forEach(dateStr => {
+      (appData.notes[dateStr] || []).forEach(note => {
+        if (!note || note.isStudy || !note.notification || !note.notification.enabled) return;
+        if (!note.notification.sent) note.notification.sent = {};
+        getNotificationEventsForNote(dateStr, note).forEach(ev => {
+          const eventTime = ev.at.getTime();
+          const sentKey = ev.key + '@' + eventTime;
+          if (eventTime <= now && now - eventTime < 70 * 1000 && !note.notification.sent[sentKey]) {
+            try {
+              playScheduleNotificationSound();
+              new Notification(`📅 ${note.text}`, {
+                body: `${dateStr} ${note.startTime || ''}${note.endTime ? '〜' + note.endTime : ''}\n${ev.label}`,
+                tag: `my-calendar-${note.id}-${ev.key}`
+              });
+            } catch(e) {}
+            note.notification.sent[sentKey] = true;
+            changed = true;
+          }
+        });
+      });
+    });
+    if (changed) saveLocalStorage();
+  }
+
+  function deleteSelectedDatePopupNote() {
+    if (!selectedDatePopupNoteIdForDelete || !currentSelectedDay) return;
+    if (appData.notes[currentSelectedDay]) {
+      appData.notes[currentSelectedDay] = appData.notes[currentSelectedDay].filter(n => n.id !== selectedDatePopupNoteIdForDelete);
+    }
+    selectedDatePopupNoteIdForDelete = null;
+    saveLocalStorage();
+    renderCalendar();
+    renderDatePopupNotesList();
+  }
+
+  function handleDatePopupDrop(e) {
+    e.preventDefault();
+    document.getElementById('datePopupTrashBin').classList.remove('drag-over');
+    deleteSelectedDatePopupNote();
+  }
+
+  // 予定入力・付箋入力の両方で共通して使う時刻変換。
+  // 以前は付箋入力関数の中だけに存在していたため、別の場所から呼んだときに
+  // convertTo24Hour is not defined になり、＜書き込み＞が止まることがありました。
+  function convertTo24Hour(hour, minute, ampm) {
+    let h = parseInt(String(hour || '0'), 10);
+    let m = parseInt(String(minute || '0'), 10);
+    if (Number.isNaN(h)) h = 0;
+    if (Number.isNaN(m)) m = 0;
+    h = Math.max(0, Math.min(globalTimeFormat12h ? 12 : 23, h));
+    m = Math.max(0, Math.min(59, m));
+    if (globalTimeFormat12h) {
+      if (h === 12) h = ampm === 'AM' ? 0 : 12;
+      else if (ampm === 'PM') h += 12;
+    }
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function addNoteFromDatePopup() {
+    try {
+      const text = document.getElementById('popupNoteInput')?.value.trim() || '';
+      const startHRaw = document.getElementById('popupStartTimeHour')?.value.trim() || '';
+      const startMRaw = document.getElementById('popupStartTimeMin')?.value.trim() || '';
+      const endHRaw = document.getElementById('popupEndTimeHour')?.value.trim() || '';
+      const endMRaw = document.getElementById('popupEndTimeMin')?.value.trim() || '';
+      if (!currentSelectedDay) {
+        alert('日付が選択されていません。もう一度日付を選んでください。');
+        return;
+      }
+
+      let startTime = '';
+      let endTime = '';
+      const popupIs12h = document.querySelector('input[name="popupTimeFormat"]:checked')?.value === '12';
+      if (startHRaw || startMRaw) {
+        startTime = popupIs12h
+          ? convertTo24Hour(startHRaw || '0', startMRaw || '0', document.getElementById('popupStartAmPm')?.value || 'AM')
+          : `${String(parseInt(startHRaw || '0', 10) || 0).padStart(2,'0')}:${String(parseInt(startMRaw || '0', 10) || 0).padStart(2,'0')}`;
+      }
+      if (endHRaw || endMRaw) {
+        endTime = popupIs12h
+          ? convertTo24Hour(endHRaw || '0', endMRaw || '0', document.getElementById('popupEndAmPm')?.value || 'AM')
+          : `${String(parseInt(endHRaw || '0', 10) || 0).padStart(2,'0')}:${String(parseInt(endMRaw || '0', 10) || 0).padStart(2,'0')}`;
+      }
+
+      const icon = appData.customIcons['popupNote'] || '📌';
+      if (!appData.notes[currentSelectedDay]) appData.notes[currentSelectedDay] = [];
+      appData.notes[currentSelectedDay].push({
+        id: 'note_' + Date.now(),
+        text, icon, startTime, endTime, notifyTime: '08:00',
+        notification: { enabled:false, weekBefore:false, previousMorning:false, customAt:'', sent:{} },
+        isStudy:false, category:'予定・メモ'
+      });
+      saveLocalStorage();
+      renderDatePopupNotesList();
+      renderCalendar();
+      alert('予定を追加しました！');
+    } catch (err) {
+      console.error('addNoteFromDatePopup error:', err);
+      alert('書き込みに失敗しました。もう一度お試しください。');
+    }
+  }
+
+  function normalizeNotificationDateTime(dateRaw, timeRaw) {
+    const normalizedDate = String(dateRaw || '').trim().replace(/[-.]/g, '/');
+    const dm = normalizedDate.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    const tm = String(timeRaw || '').trim().match(/^(\d{1,2}):(\d{1,2})$/);
+    if (!dm || !tm) return '';
+    const y = Number(dm[1]), mo = Number(dm[2]), d = Number(dm[3]);
+    const hh = Number(tm[1]), mm = Number(tm[2]);
+    const check = new Date(y, mo - 1, d);
+    if (check.getFullYear() !== y || check.getMonth() !== mo - 1 || check.getDate() !== d || hh > 23 || mm > 59) return '';
+    return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  }
+
+  function setActivePopupTimeInput(inputId) {
+    activePopupTimeInputId = inputId;
+    document.querySelectorAll('#datePopupModal .time-input-field').forEach(el => el.classList.remove('active-field'));
+    document.getElementById(inputId).classList.add('active-field');
+  }
+
+  function pressPopupDigit(val) {
+    const target = document.getElementById(activePopupTimeInputId);
+    if (!target) return;
+    if (val === 'CLR') target.value = '';
+    else if (val === 'BS') target.value = target.value.slice(0, -1);
+    else {
+      if (target.value.length < 2) target.value += val;
+    }
+  }
+
+  async function searchWeatherLocation() {
+    const input=document.getElementById('weatherLocationInput');
+    const name=String(input?.value||'').trim();
+    if(!name){ alert('市区町村・都市名を入力してください。'); return; }
+    const status=document.getElementById('weatherLocationStatus');
+    if(status) status.textContent='📍 場所を検索しています…';
+    try{
+      const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=ja&format=json`;
+      const res=await fetch(url);
+      if(!res.ok) throw new Error(`場所検索エラー ${res.status}`);
+      const data=await res.json();
+      const r=data?.results?.[0];
+      if(!r) throw new Error('該当する場所が見つかりませんでした。');
+      appData.weatherLocation={name:[r.name,r.admin1,r.country].filter(Boolean).join('・'),latitude:r.latitude,longitude:r.longitude};
+      appData.weatherForecast={}; saveLocalStorage(); updateSettingsUI(); await fetchWeatherForecast();
+      alert(`天気予報の取得場所を「${appData.weatherLocation.name}」に設定しました。`);
+    }catch(e){ if(status) status.textContent=`⚠️ ${e.message||e}`; alert(`天気予報の場所を設定できませんでした。\n${e.message||e}`); }
+  }
+
+  function useCurrentWeatherLocation(){
+    if(!navigator.geolocation){ alert('このブラウザでは現在地を取得できません。場所名を入力してください。'); return; }
+    const status=document.getElementById('weatherLocationStatus'); if(status) status.textContent='📱 現在地を取得しています…';
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      appData.weatherLocation={name:'現在地',latitude:pos.coords.latitude,longitude:pos.coords.longitude};
+      appData.weatherForecast={}; saveLocalStorage(); updateSettingsUI(); await fetchWeatherForecast();
+    }, err=>{
+      if(status) status.textContent='⚠️ 現在地を取得できませんでした。場所名を入力してください。';
+      alert('現在地を取得できませんでした。ブラウザの位置情報許可を確認するか、場所名を入力してください。');
+    }, {enableHighAccuracy:true,timeout:10000,maximumAge:300000});
+  }
+
+  async function fetchWeatherForecast(){
+    if(!appData.showWeather) return;
+    let loc=appData.weatherLocation||{};
+    if(!(Number.isFinite(loc.latitude)&&Number.isFinite(loc.longitude))){
+      if(navigator.geolocation){
+        try{
+          const pos=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:false,timeout:6000,maximumAge:600000}));
+          loc={name:'現在地',latitude:pos.coords.latitude,longitude:pos.coords.longitude};
+          appData.weatherLocation=loc; saveLocalStorage(); updateSettingsUI();
+        }catch(e){ return; }
+      } else return;
+    }
+    try{
+      const url=`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(loc.latitude)}&longitude=${encodeURIComponent(loc.longitude)}&daily=weather_code&forecast_days=16&timezone=auto`;
+      const res=await fetch(url); if(!res.ok) throw new Error(`天気予報取得エラー ${res.status}`);
+      const data=await res.json(); const forecast={};
+      (data.daily?.time||[]).forEach((date,i)=>{forecast[date]=weatherCodeIcons[data.daily.weather_code?.[i]]||'🌤️';});
+      appData.weatherForecast=forecast; saveLocalStorage(); renderCalendar();
+      const status=document.getElementById('weatherLocationStatus'); if(status) status.textContent=`現在の取得場所：${appData.weatherLocation?.name||'現在地'}`;
+    }catch(e){ console.error('Weather forecast failed:',e); }
+  }
+
+  function getRokuyo(dateStr) {
+    const parts = dateStr.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    const seed = Math.floor(d.getTime() / (1000 * 60 * 60 * 24)) % 6;
+    return ['大安', '赤口', '先勝', '友引', '先負', '仏滅'][seed];
+  }
+
+  function isHoliday(dateStr) {
+    return !!holidayNames[dateStr];
+  }
+
+  function getWeatherIcon(dateStr) {
+    return appData.weatherForecast?.[dateStr] || '🌤️';
+  }
+
+  function changeMonth(direction) {
+    currentDate.setMonth(currentDate.getMonth() + direction);
+    renderCalendar();
+  }
+  function changeWeek(direction) {
+    currentWeekOffset += direction;
+    renderCalendar();
+  }
+  function toggleViewMode() {
+    if (viewMode === 'week') {
+      viewMode = 'month';
+      document.getElementById('modeIndicator').innerText = '📱 1ヶ月モード（タップで一週間表示）';
+    } else {
+      viewMode = 'week';
+      currentWeekOffset = 0;
+      document.getElementById('modeIndicator').innerText = '📱 一週間モード（タップで1ヶ月表示）';
+    }
+    renderCalendar();
+  }
+
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.style.display = 'none';
+    if (id === 'stickyAddModal') modal.classList.remove('from-schedule');
+  }
+
+  function openCreateMenuModal() { openModal('createMenuModal'); }
+  function openSettingsModal() { openModal('settingsModal'); }
+  function openReviewModal() {
+    openModal('reviewModal');
+    appData.selectedLangs.forEach(langCode => {
+      if (!Array.isArray(aiWordHistory[langCode])) aiWordHistory[langCode] = [];
+      if (!Number.isInteger(aiWordPositions[langCode])) aiWordPositions[langCode] = aiWordHistory[langCode].length - 1;
+      delete langCardIndices[langCode];
+    });
+    renderLangCards();
+    renderStockWordsList();
+    refreshAiWordsForSelectedLanguages();
+  }
+function openTodayDatePopup() {
+  const today = new Date();
+
+  const targetDate =
+    `${today.getFullYear()}-` +
+    `${String(today.getMonth() + 1).padStart(2, '0')}-` +
+    `${String(today.getDate()).padStart(2, '0')}`;
+
+  currentSelectedDay = targetDate;
+
+  openDatePopupModal(targetDate);
+}
+
+  function openTodayTimerModal() {
+    // カレンダー上の日付からタイマーを開いた場合は、その日を自動的に記録先にします。
+    // 日付がまだ選択されていない場合だけ、現在表示中のカレンダー日を使用します。
+    const fallbackDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+    const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(currentSelectedDay || '') ? currentSelectedDay : fallbackDate;
+    currentSelectedDay = targetDate;
+    const targetParts = targetDate.split('-').map(Number);
+    if (targetParts.length === 3 && targetParts[0] && targetParts[1]) {
+      studyCurrentDate = new Date(targetParts[0], targetParts[1] - 1, 1);
+    }
+    const dateInput = document.getElementById('timerRecordDate');
+    if (dateInput) dateInput.value = targetDate.replace(/-/g, '/');
+    document.getElementById('timerDateTitle').innerText = '⏱️ 学習記録タイマー';
+    updateStudyIconButton();
+    renderRegisteredSubjects();
+    openModal('timerModal');
+  }
+
+  // 通常カレンダーの予定ポップアップから、その日付の学習タイマーを開く。
+  // currentSelectedDayだけに依存せず、現在表示中のタイトルから日付も取得して確実に引き継ぎます。
+  function openTimerFromDatePopup() {
+    const titleEl = document.getElementById('datePopupTitle');
+    const titleText = titleEl ? titleEl.innerText : '';
+    const match = titleText.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const dateStr = match
+      ? `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`
+      : currentSelectedDay;
+
+    closeModal('datePopupModal');
+    openTodayTimerModalFromDate(dateStr);
+  }
+
+  function openTodayTimerModalFromDate(dateStr) {
+    currentSelectedDay = dateStr || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(currentSelectedDay)) {
+      const p = currentSelectedDay.split('-').map(Number);
+      studyCurrentDate = new Date(p[0], p[1] - 1, 1);
+    }
+    const dateInput = document.getElementById('timerRecordDate');
+    if (dateInput) dateInput.value = currentSelectedDay.replace(/-/g, '/');
+    document.getElementById('timerDateTitle').innerText = '⏱️ 学習記録タイマー';
+    updateStudyIconButton();
+    renderRegisteredSubjects();
+    openModal('timerModal');
+  }
+
+  function setTimerRecordDate(value) {
+    const raw = String(value || '').trim();
+    if (!raw) {
+      currentSelectedDay = '';
+      return;
+    }
+    const normalized = raw.replace(/\./g, '/').replace(/-/g, '/');
+    const m = normalized.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (!m) {
+      alert('日付は YYYY/MM/DD の形式で入力してください。');
+      return;
+    }
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    const check = new Date(y, mo - 1, d);
+    if (check.getFullYear() !== y || check.getMonth() !== mo - 1 || check.getDate() !== d) {
+      alert('正しい日付を入力してください。');
+      return;
+    }
+    currentSelectedDay = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    studyCurrentDate = new Date(y, mo - 1, 1);
+    const dateInput = document.getElementById('timerRecordDate');
+    if (dateInput) dateInput.value = `${y}/${String(mo).padStart(2,'0')}/${String(d).padStart(2,'0')}`;
+  }
+
+  function openStudyCalendarModal() {
+    // 「学習記録カレンダー」を開くたび、必ず今日の年月を表示します。
+    // 日付をタップした後の詳細表示やタイマーからの遷移は、それぞれの選択日を維持します。
+    const today = getTodayDateObject();
+    studyCurrentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    openModal('studyCalendarModal');
+    renderStudyCalendar();
+  }
+
+  function openVerticalScheduleModalFromMain() {
+    closeModal('stickyAddModal');
+    openModal('verticalScheduleModal');
+    renderVerticalSchedule();
+  }
+
+  // 通常カレンダーの日付ポップアップから、一日縦長スケジュールを開く。
+  // 日付は現在選択されている日付のまま引き継ぎます。
+  function openVerticalScheduleFromDatePopup() {
+    closeModal('datePopupModal');
+    openModal('verticalScheduleModal');
+    renderVerticalSchedule();
+  }
+
+  function openStudyRecordCheckModal(dateStr) {
+    currentSelectedDay = dateStr;
+    document.getElementById('studyRecordCheckTitle').innerText = `学習記録確認 (${dateStr})`;
+    const listContainer = document.getElementById('studyRecordCheckList');
+    listContainer.innerHTML = '';
+
+    const studies = appData.studyRecords[dateStr] || [];
+
+    if (studies.length === 0) {
+      listContainer.innerHTML = '<div style="font-size:11px; color:#888; text-align:center; padding:10px;">この日の学習記録はありません。</div>';
+    } else {
+      studies.forEach((item) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'view-note-item';
+        if (selectedStudyRecordCheckIdForDelete === item.id) itemEl.classList.add('selected-for-delete');
+
+        let timeStr = item.startTime && item.endTime ? `[${item.startTime}〜${item.endTime}] ` : '';
+        const mainWrap = document.createElement('div');
+        mainWrap.style.cssText = 'flex:1; display:flex; align-items:flex-start; gap:6px; min-width:0;';
+        const iconSpan = document.createElement('span');
+        iconSpan.style.fontSize = '14px';
+        const iconValue = item.icon || '🏆';
+        if (typeof iconValue === 'string' && (iconValue.startsWith('data:image') || iconValue.startsWith('http'))) {
+          const img = document.createElement('img');
+          img.src = iconValue;
+          img.alt = '';
+          img.style.cssText = 'width:22px;height:22px;object-fit:cover;border-radius:4px;';
+          iconSpan.appendChild(img);
+        } else {
+          iconSpan.textContent = iconValue;
+        }
+        const textWrap = document.createElement('div');
+        textWrap.style.cssText = 'min-width:0;';
+        const categoryEl = document.createElement('div');
+        categoryEl.style.cssText = 'font-weight:bold; color:var(--main-color);';
+        categoryEl.textContent = timeStr + (item.category || '記録');
+        const bodyEl = document.createElement('div');
+        bodyEl.style.cssText = 'margin-top:2px; color:#333; white-space:pre-wrap; word-break:break-word;';
+        bodyEl.textContent = item.text || '';
+        textWrap.append(categoryEl, bodyEl);
+        mainWrap.append(iconSpan, textWrap);
+        const selectEl = document.createElement('span');
+        selectEl.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer;';
+        selectEl.textContent = '選択';
+        selectEl.onclick = (event) => { event.stopPropagation(); selectStudyRecordCheckItem(item.id); };
+        itemEl.append(mainWrap, selectEl);
+        itemEl.onclick = () => selectStudyRecordCheckItem(item.id);
+        itemEl.draggable = true;
+        itemEl.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', item.id);
+          selectedStudyRecordCheckIdForDelete = item.id;
+        };
+        listContainer.appendChild(itemEl);
+      });
+    }
+    openModal('studyRecordCheckModal');
+  }
+
+  function selectStudyRecordCheckItem(id) {
+    selectedStudyRecordCheckIdForDelete = (selectedStudyRecordCheckIdForDelete === id) ? null : id;
+    openStudyRecordCheckModal(currentSelectedDay);
+  }
+
+  function deleteSelectedStudyRecordCheckItem() {
+    if (!selectedStudyRecordCheckIdForDelete || !currentSelectedDay) return;
+    if (appData.studyRecords[currentSelectedDay]) {
+      appData.studyRecords[currentSelectedDay] = appData.studyRecords[currentSelectedDay].filter(i => i.id !== selectedStudyRecordCheckIdForDelete);
+    }
+    selectedStudyRecordCheckIdForDelete = null;
+    saveLocalStorage();
+    renderCalendar();
+    renderStudyCalendar();
+    openStudyRecordCheckModal(currentSelectedDay);
+  }
+
+  function handleStudyRecordCheckDrop(e) {
+    e.preventDefault();
+    document.getElementById('studyRecordCheckTrashBin').classList.remove('drag-over');
+    deleteSelectedStudyRecordCheckItem();
+  }
+
+  function initTimerCategorySelect() {
+    const sel = document.getElementById('timerCategorySelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const subjects = appData.subjectIcons && typeof appData.subjectIcons === 'object'
+      ? Object.entries(appData.subjectIcons) : [];
+    // 互換用の非表示select。登録済みの学習内容をそのまま選択肢にします。
+    subjects.forEach(([name, icon]) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.innerText = `${iconToDisplayText(icon)} ${name}`;
+      sel.appendChild(opt);
+    });
+    if (selectedCategory && !Array.from(sel.options).some(o => o.value === selectedCategory)) {
+      const opt = document.createElement('option');
+      opt.value = selectedCategory;
+      opt.innerText = selectedCategory;
+      sel.appendChild(opt);
+    }
+    if (sel.options.length) sel.value = selectedCategory || sel.options[0].value;
+  }
+  function handleCategorySelectChange(sel) {
+    selectedCategory = sel.value;
+    appData.selectedCategory = selectedCategory;
+    saveLocalStorage();
+    renderRegisteredSubjects();
+    updateTimerSelectedStudyHint();
+  }
+
+  function startTimer() {
+    // 画面上で現在選択されている学習内容を最優先にします。
+    // 保存データの古い「英語学習」が、登録した任意の学習内容を上書きしないようにします。
+    if (!selectedCategory || !appData.subjectIcons || !appData.subjectIcons[selectedCategory]) {
+      selectedCategory = (appData.selectedCategory && appData.subjectIcons && appData.subjectIcons[appData.selectedCategory])
+        ? appData.selectedCategory
+        : (Object.keys(appData.subjectIcons || {})[0] || '英語学習');
+    }
+    appData.selectedCategory = selectedCategory;
+    saveLocalStorage();
+
+    // タイマー開始時点の学習内容を固定して記録します。
+    // タイマー中に別の学習内容を選んでも、開始した学習内容のまま保存されます。
+    timerActiveCategory = selectedCategory;
+    if (isTimerRunning) return;
+    isTimerRunning = true;
+    document.getElementById('startBtn').style.backgroundColor = '#95a5a6';
+    timerInterval = setInterval(() => {
+      secondsElapsed++;
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (!isTimerRunning) return;
+    isTimerRunning = false;
+    clearInterval(timerInterval);
+    document.getElementById('startBtn').style.backgroundColor = '#2ecc71';
+
+    if (secondsElapsed > 0) {
+      const hours = Math.floor(secondsElapsed / 3600);
+      const mins = Math.floor((secondsElapsed % 3600) / 60);
+      const secs = secondsElapsed % 60;
+      const timeStr = `${hours > 0 ? hours + '時間' : ''}${mins}分${secs}秒`;
+      
+      // タイマー画面に表示されている日付を、実際の保存先として使用します。
+      // カレンダーから開いた場合も、ユーザーが日付欄を変更した場合も同じ日付に保存します。
+      const timerDateInput = document.getElementById('timerRecordDate');
+      if (timerDateInput && timerDateInput.value.trim()) {
+        setTimerRecordDate(timerDateInput.value);
+      }
+      const todayStr = currentSelectedDay || `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+      if (!appData.studyRecords[todayStr]) appData.studyRecords[todayStr] = [];
+
+      appData.studyRecords[todayStr].push({
+        id: 'timer_' + Date.now(),
+        text: `タイマー計測: ${timeStr}`,
+        icon: getSubjectIconForStudyRecord(timerActiveCategory),
+        startTime: '',
+        endTime: '',
+        isStudy: true,
+        category: timerActiveCategory
+      });
+      saveLocalStorage();
+      const savedParts = todayStr.split('-').map(Number);
+      if (savedParts.length === 3) studyCurrentDate = new Date(savedParts[0], savedParts[1] - 1, 1);
+      renderCalendar();
+      renderStudyCalendar();
+      alert(`タイマー計測完了 (${timeStr}) を学習記録に保存しました！`);
+    }
+  }
+
+  function resetTimer() {
+    isTimerRunning = false;
+    clearInterval(timerInterval);
+    secondsElapsed = 0;
+    timerActiveCategory = '';
+    updateTimerDisplay();
+    document.getElementById('startBtn').style.backgroundColor = '#2ecc71';
+  }
+
+  function updateTimerDisplay() {
+    const hours = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+    const secs = String(secondsElapsed % 60).padStart(2, '0');
+    document.getElementById('timerDisplay').innerText = `${hours}:${mins}:${secs}`;
+  }
+
+  function toggleTimeFormat(format) {
+    manualTimeFormat12h = (format === '12');
+    const ampm1 = document.getElementById('manualStartAmPmSelect');
+    const ampm2 = document.getElementById('manualEndAmPmSelect');
+    if (manualTimeFormat12h) {
+      ampm1.style.display = 'inline-block';
+      ampm2.style.display = 'inline-block';
+    } else {
+      ampm1.style.display = 'none';
+      ampm2.style.display = 'none';
+    }
+  }
+
+  function togglePopupTimeFormat(format) {
+    const is12h = (format === '12');
+    document.querySelectorAll('input[name="popupTimeFormat"]').forEach(r => { r.checked = r.value === format; });
+    const ampm1 = document.getElementById('popupStartAmPm');
+    const ampm2 = document.getElementById('popupEndAmPm');
+    if (ampm1) ampm1.style.display = is12h ? 'inline-block' : 'none';
+    if (ampm2) ampm2.style.display = is12h ? 'inline-block' : 'none';
+  }
+
+  function toggleGlobalTimeFormat(format) {
+    globalTimeFormat12h = (format === '12');
+    document.querySelectorAll('input[name="globalTimeFormat"]').forEach(r => {
+      r.checked = r.value === format;
+    });
+
+    const ampm1 = document.getElementById('startAmPm');
+    const ampm2 = document.getElementById('endAmPm');
+    const ampm3 = document.getElementById('notifyAmPm');
+
+    [ampm1, ampm2, ampm3].forEach(el => {
+      if (el) el.style.display = globalTimeFormat12h ? 'inline-block' : 'none';
+    });
+  }
+
+  function saveManualTimerRecord() {
+    if (appData.selectedCategory && appData.subjectIcons[appData.selectedCategory]) selectedCategory = appData.selectedCategory;
+    const startH = document.getElementById('manualStartHour').value;
+    const startM = document.getElementById('manualStartMin').value;
+    const endH = document.getElementById('manualEndHour').value;
+    const endM = document.getElementById('manualEndMin').value;
+    const hoursInput = document.getElementById('manualHoursInput').value;
+    const minsInput = document.getElementById('manualMinutesInput').value;
+
+    let durationText = '';
+    let startStr = '';
+    let endStr = '';
+
+    if (startH && endH) {
+      startStr = `${startH}:${startM || '00'}`;
+      endStr = `${endH}:${endM || '00'}`;
+      durationText = `手動記録 (${startStr}〜${endStr})`;
+    } else if (hoursInput || minsInput) {
+      durationText = `手動指定 (${hoursInput || 0}時間 ${minsInput || 0}分)`;
+    } else {
+      alert('時間を入力してください。');
+      return;
+    }
+
+    // 手動記録もタイマー画面の日付欄を保存先にします。
+    const timerDateInput = document.getElementById('timerRecordDate');
+    if (timerDateInput && timerDateInput.value.trim()) {
+      setTimerRecordDate(timerDateInput.value);
+    }
+    const todayStr = currentSelectedDay || `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+    if (!appData.studyRecords[todayStr]) appData.studyRecords[todayStr] = [];
+
+    appData.studyRecords[todayStr].push({
+      id: 'manual_' + Date.now(),
+      text: durationText,
+      icon: getSubjectIconForStudyRecord(selectedCategory),
+      startTime: startStr,
+      endTime: endStr,
+      isStudy: true,
+      category: selectedCategory
+    });
+    saveLocalStorage();
+    const savedParts = todayStr.split('-').map(Number);
+    if (savedParts.length === 3) studyCurrentDate = new Date(savedParts[0], savedParts[1] - 1, 1);
+    renderCalendar();
+    renderStudyCalendar();
+    alert('手動学習記録を追加しました！');
+  }
+
+  function registerSubjectAndSave() {
+    const input = document.getElementById('studyContentInput');
+    const val = input ? input.value.trim() : '';
+    if (!val) { alert('学習内容を入力してください。'); return; }
+    if (!appData.subjectIcons || typeof appData.subjectIcons !== 'object') appData.subjectIcons = {};
+    const currentStudyIcon = appData.customIcons['study'] || '🏆';
+    appData.subjectIcons[val] = currentStudyIcon;
+    selectedCategory = val;
+    appData.selectedCategory = val;
+    selectedStudySubjectForDelete = val;
+    const sel = document.getElementById('timerCategorySelect');
+    if (sel) {
+      let opt = Array.from(sel.options).find(o => o.value === val);
+      if (!opt) { opt = document.createElement('option'); opt.value = val; sel.appendChild(opt); }
+      opt.innerText = `${iconToDisplayText(currentStudyIcon)} ${val}`;
+      sel.value = val;
+    }
+    saveLocalStorage();
+    updateStudyIconButton();
+    renderRegisteredSubjects();
+    updateTimerSelectedStudyHint();
+    input.value = '';
+    alert(`「${val}」を登録しました。現在の学習として選択されています。`);
+  }
+
+  function iconToDisplayText(icon) {
+    if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http'))) return '🖼️';
+    return icon || '📚';
+  }
+
+  function updateStudyIconButton() {
+    const btn = document.getElementById('studyIconBtn');
+    if (!btn) return;
+    const icon = appData.customIcons['study'] || '🏆';
+    btn.innerHTML = '';
+    if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http'))) {
+      const img = document.createElement('img');
+      img.src = icon;
+      img.style.width = '22px';
+      img.style.height = '22px';
+      img.style.borderRadius = '50%';
+      img.style.objectFit = 'cover';
+      btn.appendChild(img);
+    } else {
+      btn.textContent = icon;
+    }
+  }
+
+  function renderVerticalSchedule() {
+    const list = document.getElementById('verticalScheduleList');
+    list.innerHTML = '';
+    const todayStr = currentSelectedDay || `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+    document.getElementById('verticalScheduleTitle').innerText = `📅 一日縦長スケジュール (${todayStr})`;
+
+    for (let h = 6; h <= 23; h++) {
+      const hourStr = String(h).padStart(2, '0') + ':00';
+      const row = document.createElement('div');
+      row.className = 'schedule-hour-row';
+
+      const timeLbl = document.createElement('div');
+      timeLbl.className = 'schedule-time-lbl';
+      timeLbl.innerText = hourStr;
+      row.appendChild(timeLbl);
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'schedule-content';
+
+      const notes = (appData.notes[todayStr] || []).filter(n => {
+        if (!n.startTime) return false;
+        return n.startTime.startsWith(String(h).padStart(2, '0'));
+      });
+
+      notes.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'schedule-sticky-card';
+        if (selectedScheduleIdForDelete === note.id) card.classList.add('selected-trash');
+        const mainSpan = document.createElement('span');
+        mainSpan.style.cssText = 'display:flex; align-items:center; gap:4px; min-width:0; word-break:break-word;';
+        const iconValue = note.icon || '📌';
+        // 一日縦長スケジュールでは、ユーザーが選んだ画像アイコンを
+        // 文字列として扱わず、必ず画像として表示します。
+        // スマホのローカルHTMLで保存データに空白等が入っても判定できるようにします。
+        const normalizedIcon = typeof iconValue === 'string' ? iconValue.trim() : '';
+        const isImageIcon = typeof iconValue === 'string' && (
+          /^data:image\//i.test(normalizedIcon) ||
+          /^https?:\/\//i.test(normalizedIcon) ||
+          /^blob:/i.test(normalizedIcon) ||
+          /^file:/i.test(normalizedIcon) ||
+          (normalizedIcon.length > 200 && /^[A-Za-z0-9+/=\s]+$/.test(normalizedIcon))
+        );
+        if (isImageIcon) {
+          const img = document.createElement('img');
+          img.src = /^data:image\//i.test(normalizedIcon) || /^https?:\/\//i.test(normalizedIcon) || /^blob:/i.test(normalizedIcon) || /^file:/i.test(normalizedIcon)
+            ? normalizedIcon
+            : `data:image/png;base64,${normalizedIcon.replace(/\s/g, '')}`;
+          img.alt = '';
+          img.style.cssText = 'width:22px;height:22px;object-fit:cover;border-radius:50%;flex:0 0 22px;display:block;';
+          mainSpan.appendChild(img);
+        } else {
+          const iconText = document.createElement('span');
+          iconText.textContent = iconValue;
+          mainSpan.appendChild(iconText);
+        }
+        const noteText = document.createElement('span');
+        noteText.textContent = ` ${note.text || ''} (${note.startTime}~${note.endTime})`;
+        noteText.style.cssText = 'min-width:0; word-break:break-word;';
+        mainSpan.appendChild(noteText);
+        const selectSpan = document.createElement('span');
+        selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
+        selectSpan.textContent = '選択';
+        selectSpan.onclick = (event) => { event.stopPropagation(); selectScheduleItem(note.id); };
+        card.append(mainSpan, selectSpan);
+        card.onclick = (e) => { e.stopPropagation(); openNoteDetail(note.id); };
+        card.draggable = true;
+        card.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', note.id);
+          selectedScheduleIdForDelete = note.id;
+        };
+        contentDiv.appendChild(card);
+      });
+
+      row.onclick = () => openStickyModalWithDate(todayStr, true);
+      row.appendChild(contentDiv);
+      list.appendChild(row);
+    }
+  }
+
+  function selectScheduleItem(id) {
+    selectedScheduleIdForDelete = (selectedScheduleIdForDelete === id) ? null : id;
+    renderVerticalSchedule();
+  }
+
+  function deleteSelectedScheduleItem() {
+    if (!selectedScheduleIdForDelete || !currentSelectedDay) return;
+    if (!appData.notes[currentSelectedDay]) return;
+    appData.notes[currentSelectedDay] = appData.notes[currentSelectedDay].filter(i => i.id !== selectedScheduleIdForDelete);
+    selectedScheduleIdForDelete = null;
+    saveLocalStorage();
+    renderCalendar();
+    renderVerticalSchedule();
+  }
+
+  function handleScheduleDrop(e) {
+    e.preventDefault();
+    document.getElementById('scheduleTrashBin').classList.remove('drag-over');
+    deleteSelectedScheduleItem();
+  }
+
+  function renderStudyCalendar() {
+    const titleEl = document.getElementById('studyCalendarHeaderTitle');
+    const container = document.getElementById('studyDaysContainer');
+    container.innerHTML = '';
+    const year = studyCurrentDate.getFullYear();
+    const month = studyCurrentDate.getMonth();
+    titleEl.innerText = `${year}年 ${month + 1}月`;
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'day-cell empty';
+      container.appendChild(emptyDiv);
+    }
+    for (let d = 1; d <= lastDay; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+
+      // 学習記録カレンダーも「今日」を通常カレンダーと同じ色味で強調します。
+      const today = new Date();
+      const isToday =
+        today.getFullYear() === year &&
+        today.getMonth() === month &&
+        today.getDate() === d;
+      if (isToday) cell.classList.add('today-cell');
+
+      const dayOfWeekIndex = (firstDayIndex + d - 1) % 7;
+      if (dayOfWeekIndex === 0) cell.classList.add('sunday-bg');
+      else if (dayOfWeekIndex === 6) cell.classList.add('saturday-bg');
+
+      cell.innerHTML = `<div class="day-top-row"><span class="day-num">${d}</span></div>`;
+
+      const studies = appData.studyRecords[dateStr] || [];
+      const iconGrid = document.createElement('div');
+      iconGrid.className = 'icon-grid';
+      for (let i = 0; i < 4; i++) {
+        const gridCell = document.createElement('div');
+        gridCell.className = 'icon-grid-cell';
+        if (studies[i]) {
+          // 修正：学習記録カレンダーでもユーザーが選択したアイコンが正しく表示されるように修正
+          const iconVal = studies[i].icon || '🏆';
+          if (iconVal.startsWith('data:image') || iconVal.startsWith('http')) {
+            const img = document.createElement('img');
+            img.src = iconVal;
+            img.className = 'custom-icon-img';
+            gridCell.appendChild(img);
+          } else {
+            gridCell.innerText = iconVal;
+          }
+        }
+        iconGrid.appendChild(gridCell);
+      }
+      cell.appendChild(iconGrid);
+      // 修正：学習記録カレンダーの日付をタップした時だけ「学習記録確認ポップアップ」が開くように設定
+      cell.onclick = () => { currentSelectedDay = dateStr; openStudyRecordCheckModal(dateStr); };
+      container.appendChild(cell);
+    }
+  }
+
+  function changeStudyMonth(dir) {
+    studyCurrentDate.setMonth(studyCurrentDate.getMonth() + dir);
+    renderStudyCalendar();
+  }
+
+  function switchLangTab(tab) {
+    if (tab === 'study') {
+      document.getElementById('langTabStudyBtn').classList.add('active');
+      document.getElementById('langTabReviewBtn').classList.remove('active');
+      document.getElementById('langStudyContent').style.display = 'block';
+      document.getElementById('langReviewContent').style.display = 'none';
+      renderLangCards();
+    } else {
+      document.getElementById('langTabStudyBtn').classList.remove('active');
+      document.getElementById('langTabReviewBtn').classList.add('active');
+      document.getElementById('langStudyContent').style.display = 'none';
+      document.getElementById('langReviewContent').style.display = 'block';
+      renderStockWordsList();
+    }
+  }
+
+  function turnLanguagePage(langCode, direction) {
+    if (!Array.isArray(aiWordHistory[langCode])) aiWordHistory[langCode] = [];
+    if (!Number.isInteger(aiWordPositions[langCode])) aiWordPositions[langCode] = aiWordHistory[langCode].length - 1;
+
+    // AI履歴がまだ0ページのとき、最初の「次のページ」で必ずAI取得を開始します。
+    // ここが旧版では内蔵6語リストだけをめくって終了してしまう原因でした。
+    if (aiWordHistory[langCode].length === 0) {
+      if (direction > 0 && getAiApiKey(getSelectedAiProvider())) {
+        generateAiWord(langCode, 'next');
+        return;
+      }
+
+      // API未設定時だけ、従来の内蔵単語リストを使用します。
+      const list = languageDatabase[langCode] || [];
+      if (!list.length) return;
+      if (!Number.isInteger(langCardIndices[langCode])) langCardIndices[langCode] = 0;
+      const nextIndex = langCardIndices[langCode] + direction;
+      if (nextIndex >= 0 && nextIndex < list.length) {
+        langCardIndices[langCode] = nextIndex;
+        renderLangCards();
+      }
+      return;
+    }
+
+    const nextPos = aiWordPositions[langCode] + direction;
+    if (nextPos >= 0 && nextPos < aiWordHistory[langCode].length) {
+      aiWordPositions[langCode] = nextPos;
+      saveLanguageHistory();
+      renderLangCards();
+      return;
+    }
+
+    // AI履歴の最後まで来たら、新しいページをAIから取得します。
+    if (direction > 0) generateAiWord(langCode, 'next');
+  }
+
+  function renderLangCards() {
+    const container = document.getElementById('langCardsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    appData.selectedLangs.slice(0, 2).forEach(langCode => {
+      const list = languageDatabase[langCode] || [];
+      let item = null, usingAI = false;
+      if (Array.isArray(aiWordHistory[langCode]) && aiWordPositions[langCode] >= 0 && aiWordHistory[langCode][aiWordPositions[langCode]]) {
+        item = aiWordHistory[langCode][aiWordPositions[langCode]];
+        usingAI = true;
+      } else if (list.length) {
+        if (!Number.isInteger(langCardIndices[langCode]) || langCardIndices[langCode] >= list.length) langCardIndices[langCode] = 0;
+        item = list[langCardIndices[langCode]];
+      }
+      if (!item) return;
+
+      const card = document.createElement('div');
+      card.className = 'lang-card';
+      const content = document.createElement('div');
+      const header = document.createElement('div');
+      header.className = 'lang-word-header';
+      const wordSpan = document.createElement('span');
+      wordSpan.textContent = item.word;
+      header.appendChild(wordSpan);
+
+      const wordAudio = document.createElement('button');
+      wordAudio.type='button'; wordAudio.className='audio-btn'; wordAudio.textContent='🔊';
+      wordAudio.onclick=e=>{e.stopPropagation(); playAudio(item.word,langCode);};
+      header.appendChild(wordAudio);
+
+      const nav=document.createElement('div');
+      nav.style.cssText='margin-left:auto;display:flex;align-items:center;gap:3px;flex-shrink:0;';
+      const prev=document.createElement('button');
+      prev.type='button'; prev.className='audio-btn'; prev.textContent='◀'; prev.title='前のページ'; prev.style.cssText='width:auto;height:22px;font-size:9px;padding:0 6px;';
+      prev.onclick=e=>{e.preventDefault();e.stopPropagation();turnLanguagePage(langCode,-1);};
+      const page=document.createElement('span');
+      page.className='lang-meta-badge'; page.style.margin='0';
+      const historyLen=Array.isArray(aiWordHistory[langCode]) ? aiWordHistory[langCode].length : 0;
+      page.textContent = historyLen ? `${aiWordPositions[langCode]+1} / ${historyLen}` : (getAiApiKey(getSelectedAiProvider()) ? `${langCardIndices[langCode]+1} / ∞` : `${langCardIndices[langCode]+1} / ${list.length}`);
+      const next=document.createElement('button');
+      next.type='button'; next.className='audio-btn'; next.textContent='▶'; next.title='次のページ（現在利用できるAIモデルから新しい単語を取得）'; next.style.cssText='width:auto;height:22px;font-size:9px;padding:0 6px;';
+      next.onclick=e=>{e.preventDefault();e.stopPropagation();turnLanguagePage(langCode,1);};
+      nav.append(prev,page,next); header.appendChild(nav); content.appendChild(header);
+
+      if (usingAI || aiWordLoading[langCode]) {
+        const label=document.createElement('div'); label.style.cssText='font-size:9px;color:var(--main-color);margin-top:3px;';
+        label.textContent=aiWordLoading[langCode]?'🤖 AIから取得中…':`🤖 ${AI_PROVIDER_DEFAULTS[getSelectedAiProvider()]?.name||'AI'}・CEFR ${item.level||'A1〜C2'}`;
+        content.appendChild(label);
+      }
+      const meta=document.createElement('div'); meta.className='lang-meta-info';
+      meta.innerHTML=`<span style="font-weight:bold;color:var(--main-color);">${item.pos||''}</span> <span class="lang-phonetic">${item.phonetic||''}</span> <span style="margin-left:4px;font-weight:bold;color:#333;">${item.meaning||''}</span>`;
+      content.appendChild(meta);
+      const exampleBox=document.createElement('div'); exampleBox.className='lang-example-box';
+      const exampleRow=document.createElement('div'); exampleRow.style.cssText='display:flex;align-items:center;gap:6px;';
+      const exampleText=document.createElement('span'); exampleText.className='lang-example-text'; exampleText.textContent=item.example||''; exampleRow.appendChild(exampleText);
+      const exampleAudio=document.createElement('button'); exampleAudio.type='button'; exampleAudio.className='audio-btn'; exampleAudio.style.cssText='width:22px;height:22px;font-size:10px;'; exampleAudio.textContent='🔊'; exampleAudio.onclick=e=>{e.stopPropagation();playAudio(item.example||'',langCode);}; exampleRow.appendChild(exampleAudio); exampleBox.appendChild(exampleRow);
+      const translation=document.createElement('div'); translation.className='lang-example-translation'; translation.textContent=item.translation||''; exampleBox.appendChild(translation); content.appendChild(exampleBox); card.appendChild(content);
+      const stockBtn=document.createElement('button'); stockBtn.type='button'; stockBtn.className='stock-btn'; stockBtn.textContent='📥 復習ページにストックする（無制限）'; stockBtn.onclick=e=>{e.stopPropagation();stockWord(langCode,item.word,item.phonetic,item.pos,item.meaning,item.example,item.translation);}; card.appendChild(stockBtn); container.appendChild(card);
+    });
+  }
+
+  // 語学学習の発音再生（既存のカード・ストック機能から共通利用）
+  // 選択した言語に合うブラウザ音声を優先して再生します。
+  function playAudio(text, lang) {
+    if (!text) return;
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+      alert('このブラウザでは音声読み上げに対応していません。');
+      return;
+    }
+
+    const langMap = {
+      en: 'en-US',
+      it: 'it-IT',
+      fr: 'fr-FR',
+      es: 'es-ES',
+      ar: 'ar-SA',
+      ko: 'ko-KR',
+      zh: 'zh-CN',
+      vi: 'vi-VN',
+      de: 'de-DE'
+    };
+    const targetLang = langMap[String(lang || 'en').toLowerCase()] || String(lang || 'en');
+
+    window.speechSynthesis.cancel();
+
+    const speak = () => {
+      const utterance = new SpeechSynthesisUtterance(String(text));
+      utterance.lang = targetLang;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const baseLang = targetLang.toLowerCase().split('-')[0];
+      const matchingVoice = voices.find(v =>
+        String(v.lang || '').toLowerCase() === targetLang.toLowerCase()
+      ) || voices.find(v =>
+        String(v.lang || '').toLowerCase().startsWith(baseLang + '-')
+      ) || voices.find(v =>
+        String(v.lang || '').toLowerCase() === baseLang
+      );
+
+      if (matchingVoice) utterance.voice = matchingVoice;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Chrome等で音声一覧の読み込みが遅い場合にも対応。
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length) {
+      speak();
+    } else {
+      window.speechSynthesis.onvoiceschanged = function() {
+        window.speechSynthesis.onvoiceschanged = null;
+        speak();
+      };
+      // voiceschangedが発火しない環境向けの再試行
+      setTimeout(() => {
+        if (!window.speechSynthesis.speaking) speak();
+      }, 100);
+    }
+  }
+
+  // 学習ページ → 復習ページへのストック保存
+  // 外国語の文字列をonclick属性へ埋め込まず、イベントから安全に呼び出します。
+  function stockWord(lang, word, phonetic, pos, meaning, example, translation) {
+    if (!Array.isArray(appData.stockWords)) appData.stockWords = [];
+
+    const exists = appData.stockWords.some(item => item.word === word && item.lang === lang);
+    if (exists) {
+      alert('すでに復習ページにストックされています。');
+      return;
+    }
+
+    appData.stockWords.push({
+      id: 'stock_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      lang,
+      word,
+      phonetic,
+      pos,
+      meaning,
+      example,
+      translation
+    });
+
+    saveLocalStorage();
+    renderStockWordsList();
+    alert(`「${word}」を復習ページにストックしました！`);
+  }
+
+  // 復習ページのストック一覧を表示
+  function renderStockWordsList() {
+    if (!Array.isArray(appData.stockWords)) appData.stockWords = [];
+    const container = document.getElementById('stockListContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (appData.stockWords.length === 0) {
+      container.innerHTML = '<div style="font-size:11px; color:#888; text-align:center; padding:10px;">ストックされた単語はありません。</div>';
+      return;
+    }
+
+    appData.stockWords.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'lang-card word-card-draggable';
+      if (selectedStockIdForDelete === item.id) card.classList.add('selected-for-delete');
+
+      const content = document.createElement('div');
+      const header = document.createElement('div');
+      header.className = 'lang-word-header';
+
+      const wordSpan = document.createElement('span');
+      wordSpan.textContent = item.word || '';
+      header.appendChild(wordSpan);
+
+      const audioBtn = document.createElement('button');
+      audioBtn.type = 'button';
+      audioBtn.className = 'audio-btn';
+      audioBtn.textContent = '🔊';
+      audioBtn.onclick = (event) => {
+        event.stopPropagation();
+        playAudio(item.word || '', item.lang || 'en');
+      };
+      header.appendChild(audioBtn);
+
+      const badge = document.createElement('span');
+      badge.className = 'lang-meta-badge';
+      badge.style.marginLeft = 'auto';
+      badge.textContent = `[${String(item.lang || '').toUpperCase()}]`;
+      header.appendChild(badge);
+
+      const selectBtn = document.createElement('span');
+      selectBtn.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; margin-left:4px;';
+      selectBtn.textContent = '選択';
+      selectBtn.onclick = (event) => {
+        event.stopPropagation();
+        selectStockItem(item.id);
+      };
+      header.appendChild(selectBtn);
+      content.appendChild(header);
+
+      const meta = document.createElement('div');
+      meta.className = 'lang-meta-info';
+      const pos = document.createElement('span');
+      pos.style.cssText = 'font-weight:bold; color:var(--main-color);';
+      pos.textContent = item.pos || '—';
+      const phonetic = document.createElement('span');
+      phonetic.className = 'lang-phonetic';
+      phonetic.textContent = item.phonetic || '';
+      const meaning = document.createElement('span');
+      meaning.style.cssText = 'margin-left:4px; font-weight:bold; color:#333;';
+      meaning.textContent = item.meaning || '—';
+      meta.append(pos, document.createTextNode(' '), phonetic, meaning);
+      content.appendChild(meta);
+
+      const exampleBox = document.createElement('div');
+      exampleBox.className = 'lang-example-box';
+      const exampleRow = document.createElement('div');
+      exampleRow.style.cssText = 'display:flex; align-items:center; gap:6px;';
+      const exampleText = document.createElement('span');
+      exampleText.className = 'lang-example-text';
+      exampleText.textContent = item.example || '—';
+      exampleRow.appendChild(exampleText);
+      const exampleAudio = document.createElement('button');
+      exampleAudio.type = 'button';
+      exampleAudio.className = 'audio-btn';
+      exampleAudio.style.cssText = 'width:22px; height:22px; font-size:10px;';
+      exampleAudio.textContent = '🔊';
+      exampleAudio.onclick = (event) => {
+        event.stopPropagation();
+        playAudio(item.example || '', item.lang || 'en');
+      };
+      exampleRow.appendChild(exampleAudio);
+      exampleBox.appendChild(exampleRow);
+      const translation = document.createElement('div');
+      translation.className = 'lang-example-translation';
+      translation.textContent = item.translation || '—';
+      exampleBox.appendChild(translation);
+      content.appendChild(exampleBox);
+
+      card.appendChild(content);
+      card.onclick = () => selectStockItem(item.id);
+      card.draggable = true;
+      card.ondragstart = (event) => {
+        event.dataTransfer.setData('text/plain', String(item.id));
+        selectedStockIdForDelete = item.id;
+      };
+      container.appendChild(card);
+    });
+  }
+
+  function selectStockItem(id) {
+    selectedStockIdForDelete = (selectedStockIdForDelete === id) ? null : id;
+    renderStockWordsList();
+  }
+
+  function deleteSelectedStockItem() {
+    if (!selectedStockIdForDelete) return;
+    appData.stockWords = appData.stockWords.filter(w => w.id !== selectedStockIdForDelete);
+    selectedStockIdForDelete = null;
+    saveLocalStorage();
+    renderStockWordsList();
+  }
+
+  function handleLangDrop(e) {
+    e.preventDefault();
+    document.getElementById('langTrashBin').classList.remove('drag-over');
+    deleteSelectedStockItem();
+  }
+
+  function limitLangSelection(checkbox) {
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="appLang"]:checked'));
+
+    if (checkedBoxes.length > 2) {
+      checkbox.checked = false;
+      alert('語学学習コーナーで選択できる言語は最大2か国語です。\n必要に応じて、設定からいつでも別の言語に変更できます。');
+      return;
+    }
+
+    appData.selectedLangs = checkedBoxes.map(b => b.value).slice(0, 2);
+    if (appData.selectedLangs.length === 0) {
+      // 0言語にはせず、直前の選択を残すためチェック状態を戻します。
+      checkbox.checked = true;
+      return;
+    }
+    saveLocalStorage();
+    appData.selectedLangs.forEach(langCode => { delete langCardIndices[langCode]; });
+    renderLangCards();
+  }
+
+  function toggleWeatherDisplay(cb) { appData.showWeather = cb.checked; saveLocalStorage(); renderCalendar(); }
+  function toggleRokuyoDisplay(cb) { appData.showRokuyo = cb.checked; saveLocalStorage(); renderCalendar(); }
+  function toggleHolidayDisplay(cb) { appData.showHoliday = cb.checked; saveLocalStorage(); renderCalendar(); }
+
+  function showIconPicker(target) {
+    openIconModal(target);
+  }
+
+  function renderRegisteredSubjects() {
+    const list = document.getElementById('registeredSubjectsList');
+    if (!list) return;
+    const subjects = appData.subjectIcons && typeof appData.subjectIcons === 'object' ? Object.entries(appData.subjectIcons) : [];
+    list.innerHTML = '';
+    if (subjects.length === 0) {
+      list.innerHTML = '<div style="font-size:10px; color:#999; text-align:center; padding:6px;">まだ登録されていません</div>';
+      updateTimerSelectedStudyHint();
+      return;
+    }
+    subjects.forEach(([name, icon]) => {
+      const card = document.createElement('div');
+      card.className = 'registered-subject-item' + (selectedCategory === name ? ' selected' : '');
+      card.title = 'タップ／クリックでこの学習を選択・表示';
+      const iconBtn = document.createElement('button');
+      iconBtn.type = 'button'; iconBtn.className = 'registered-subject-icon';
+      if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http'))) {
+        const img = document.createElement('img'); img.src = icon; img.alt = ''; iconBtn.appendChild(img);
+      } else { iconBtn.textContent = icon || '📚'; }
+      const textWrap = document.createElement('div'); textWrap.style.cssText='flex:1; min-width:0;';
+      const text = document.createElement('div'); text.textContent=name; text.style.cssText='font-weight:bold; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+      const state = document.createElement('div'); state.textContent=selectedCategory===name?'✓ 選択中':'タップして選択'; state.style.cssText='font-size:8px; color:#999; margin-top:1px;';
+      textWrap.append(text,state); card.append(iconBtn,textWrap);
+      const selectSubject=()=>{ selectedCategory=name; appData.selectedCategory=name; selectedStudySubjectForDelete=name; updateStudyIconButton(); renderRegisteredSubjects(); updateTimerSelectedStudyHint(); openStudySubjectPopup(name,icon); };
+      iconBtn.onclick=(e)=>{e.stopPropagation();selectSubject();};
+      card.onclick=selectSubject;
+      card.draggable=true; card.ondragstart=(e)=>{selectedStudySubjectForDelete=name;e.dataTransfer.setData('text/plain',name);};
+      list.appendChild(card);
+    });
+    updateTimerSelectedStudyHint();
+  }
+
+  function updateTimerSelectedStudyHint() {
+    const hint=document.getElementById('timerSelectedStudyHint'); if(!hint)return;
+    const name=selectedCategory||'英語学習'; const icon=getSubjectIconForStudyRecord(name);
+    hint.textContent=`現在の選択：${iconToDisplayText(icon)} ${name}`;
+  }
+
+  function openStudySubjectPopup(name, icon) {
+    const title=document.getElementById('studySubjectPopupTitle');
+    const body=document.getElementById('studySubjectPopupBody');
+    if(!title||!body)return;
+    selectedStudySubjectForDelete=name; selectedCategory=name; appData.selectedCategory=name; updateStudyIconButton(); updateTimerSelectedStudyHint();
+    title.textContent='📚 学習内容'; body.innerHTML='';
+    const iconBox=document.createElement('div'); iconBox.className='study-subject-popup-icon';
+    if(typeof icon==='string'&&(icon.startsWith('data:image')||icon.startsWith('http'))){ const img=document.createElement('img'); img.src=icon; img.alt=''; iconBox.appendChild(img); } else iconBox.textContent=icon||'📚';
+    const nameEl=document.createElement('div'); nameEl.className='study-subject-popup-name'; nameEl.textContent=name;
+    const hint=document.createElement('div'); hint.className='study-subject-popup-hint'; hint.textContent='このアイコンと学習内容を紐付けて、タイマー／手動入力の学習記録に使用します。';
+    const selectBtn=document.createElement('button'); selectBtn.className='add-note-btn'; selectBtn.style.marginTop='10px'; selectBtn.textContent='この学習を選択する';
+    selectBtn.onclick=()=>{selectedCategory=name;appData.selectedCategory=name;selectedStudySubjectForDelete=name;updateStudyIconButton();updateTimerSelectedStudyHint();renderRegisteredSubjects();closeModal('studySubjectPopupModal');};
+    body.append(iconBox,nameEl,hint,selectBtn);
+    openModal('studySubjectPopupModal');
+  }
+
+  function deleteSelectedStudySubject() {
+    const name = selectedStudySubjectForDelete;
+    if (!name || !appData.subjectIcons || !appData.subjectIcons[name]) return;
+    delete appData.subjectIcons[name];
+    if (selectedCategory === name) { selectedCategory = Object.keys(appData.subjectIcons)[0] || '英語学習'; appData.selectedCategory = selectedCategory; }
+    selectedStudySubjectForDelete = null;
+    saveLocalStorage();
+    renderRegisteredSubjects();
+    updateStudyIconButton();
+    updateTimerSelectedStudyHint();
+    closeModal('studySubjectPopupModal');
+  }
+
+  function handleStudySubjectDrop(e) {
+    e.preventDefault();
+    const name = e.dataTransfer.getData('text/plain') || selectedStudySubjectForDelete;
+    selectedStudySubjectForDelete = name;
+    deleteSelectedStudySubject();
+  }
+
+  function openIconModal(target) {
+    iconModalTarget = target;
+    selectedUserPresetIconIndex = null;
+    pendingIconSelection = '';
+    openModal('iconModal');
+    renderPresetIconGrid();
+    clearIconPreview();
+  }
+  function clearIconPreview() {
+    const placeholder = document.getElementById('cropPreviewPlaceholder');
+    const img = document.getElementById('cropPreviewImg');
+    if (!placeholder || !img) return;
+    placeholder.innerText = '📷';
+    placeholder.style.display = 'block';
+    img.src = '';
+    img.style.display = 'none';
+  }
+  function selectPresetIcon(iconStr) {
+    const placeholder = document.getElementById('cropPreviewPlaceholder');
+    const img = document.getElementById('cropPreviewImg');
+    if (!placeholder || !img) return;
+    img.src = '';
+    img.style.display = 'none';
+    pendingIconSelection = iconStr;
+    placeholder.innerText = iconStr;
+    placeholder.style.display = 'block';
+  }
+  function selectUserPresetIcon(icon) {
+    const value = icon || appData.customIcons[iconModalTarget];
+    if (!value) return;
+    const placeholder = document.getElementById('cropPreviewPlaceholder');
+    const img = document.getElementById('cropPreviewImg');
+    if (!placeholder || !img) return;
+    pendingIconSelection = value;
+    if (/^data:image\//i.test(value) || /^https?:\/\//i.test(value)) {
+      placeholder.style.display = 'none';
+      img.src = value;
+      img.style.display = 'block';
+    } else {
+      selectPresetIcon(value);
+    }
+  }
+  let selectedUserPresetIconIndex = null;
+  let pendingIconSelection = '';
+
+  function deleteSelectedUserPresetIcon() {
+    if (!Array.isArray(appData.userPresetIcons)) appData.userPresetIcons = [];
+    if (selectedUserPresetIconIndex === null || selectedUserPresetIconIndex < 0 || selectedUserPresetIconIndex >= appData.userPresetIcons.length) {
+      alert('削除したいユーザー画像を先にタップして選択してください。');
+      return;
+    }
+    appData.userPresetIcons.splice(selectedUserPresetIconIndex, 1);
+    selectedUserPresetIconIndex = null;
+    saveLocalStorage();
+    renderPresetIconGrid();
+    clearIconPreview();
+    updateCustomIconButton('noteIconBtn', appData.customIcons['note'] || '📌');
+    updateCustomIconButton('popupNoteIconBtn', appData.customIcons['popupNote'] || '📌');
+    if (typeof updateStudyIconButton === 'function') updateStudyIconButton();
+  }
+
+  function renderPresetIconGrid() {
+    const grid = document.getElementById('presetIconGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const presets = ['🏆','⭐','🔥','💡','📌','🌸','📚','☕','🎯','💻'];
+    presets.forEach(icon => {
+      const cell = document.createElement('div');
+      cell.textContent = icon;
+      cell.title = 'プリセット';
+      cell.style.cssText = 'cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;border-radius:6px;min-height:34px;';
+      cell.addEventListener('click', () => selectPresetIcon(icon));
+      grid.appendChild(cell);
+    });
+    (appData.userPresetIcons || []).forEach((icon, index) => {
+      const cell = document.createElement('div');
+      cell.title = 'ユーザー画像 ' + (index + 1);
+      cell.style.cssText = 'cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;border:1px solid var(--main-border);border-radius:6px;min-height:34px;background:#fff;';
+      const img = document.createElement('img');
+      img.src = icon;
+      img.alt = 'ユーザー画像';
+      img.style.cssText = 'width:30px;height:30px;object-fit:cover;border-radius:5px;';
+      cell.appendChild(img);
+      cell.addEventListener('click', () => {
+        selectedUserPresetIconIndex = index;
+        document.querySelectorAll('#presetIconGrid .user-preset-selected').forEach(el => el.classList.remove('user-preset-selected'));
+        cell.classList.add('user-preset-selected');
+        selectUserPresetIcon(icon);
+      });
+      if (selectedUserPresetIconIndex === index) cell.classList.add('user-preset-selected');
+      grid.appendChild(cell);
+    });
+  }
+  function refreshUserPresetIconSlot() { renderPresetIconGrid(); }
+  async function chooseIconImageFile() {
+    const input = document.getElementById('iconImageInput');
+    if (input) { input.value = ''; input.click(); }
+  }
+  function handleIconImageUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleIconFile(file);
+  }
+  function handleIconFile(file) {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      alert('画像ファイルを選択してください。');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const src = evt.target.result;
+      const img = new Image();
+      img.onload = function() {
+        const max = 160;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.78);
+        if (!Array.isArray(appData.userPresetIcons)) appData.userPresetIcons = [];
+        appData.userPresetIcons.push(compressed);
+        // 今回選んだ画像としても設定候補にします。＜決定＞で確定します。
+        pendingIconSelection = compressed;
+        saveLocalStorage();
+        selectUserPresetIcon(compressed);
+        renderPresetIconGrid();
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+  function updateCustomIconButton(buttonId, icon) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+    btn.innerHTML = '';
+    if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http') || icon.startsWith('blob:'))) {
+      const img = document.createElement('img');
+      img.src = icon;
+      img.alt = '';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = 'inherit';
+      btn.appendChild(img);
+    } else {
+      btn.textContent = icon || '📌';
+    }
+  }
+
+  function confirmIconSelection() {
+    const placeholder = document.getElementById('cropPreviewPlaceholder');
+    const value = pendingIconSelection || (placeholder.style.display !== 'none' ? placeholder.innerText : '');
+    if (value) {
+      appData.customIcons[iconModalTarget] = value;
+      saveLocalStorage();
+    }
+    closeModal('iconModal');
+    if (iconModalTarget === 'note') {
+      updateCustomIconButton('noteIconBtn', appData.customIcons['note'] || '📌');
+    } else if (iconModalTarget === 'popupNote') {
+      updateCustomIconButton('popupNoteIconBtn', appData.customIcons['popupNote'] || '📌');
+    } else if (iconModalTarget === 'study') {
+      updateStudyIconButton();
+    }
+  }
+  function openUserAvatarModal() { openIconModal('avatar'); }
+
+  function openStickyModalWithDate(dateStr, fromSchedule = false) {
+    currentSelectedDay = dateStr;
+    const stickyModal = document.getElementById('stickyAddModal');
+    if (stickyModal) stickyModal.classList.toggle('from-schedule', !!fromSchedule);
+    document.getElementById('stickyDateTitle').innerText = `予定・付箋追加 (${dateStr})`;
+    document.getElementById('noteInput').value = '';
+    document.getElementById('startTimeHourInput').value = '';
+    document.getElementById('startTimeMinInput').value = '';
+    document.getElementById('endTimeHourInput').value = '';
+    document.getElementById('endTimeMinInput').value = '';
+    document.getElementById('notifyTimeHourInput').value = '08';
+    document.getElementById('notifyTimeMinInput').value = '50';
+    document.querySelectorAll('input[name="globalTimeFormat"]').forEach(r => {
+      r.checked = r.value === '24';
+    });
+    toggleGlobalTimeFormat('24');
+    openModal('stickyAddModal');
+  }
+
+  function addNoteToSelectedDay() {
+    try {
+      const noteEl = document.getElementById('noteInput');
+      const text = noteEl ? noteEl.value.trim() : '';
+      const icon = appData.customIcons['note'] || '📌';
+      if (!currentSelectedDay) {
+        alert('日付が選択されていません。もう一度日付を選んでください。');
+        return;
+      }
+      const getVal = id => (document.getElementById(id)?.value || '').trim();
+      const startH = getVal('startTimeHourInput') || '00';
+      const startM = getVal('startTimeMinInput') || '00';
+      const endH = getVal('endTimeHourInput') || '00';
+      const endM = getVal('endTimeMinInput') || '00';
+      const startAmPm = document.getElementById('startAmPm')?.value || 'AM';
+      const endAmPm = document.getElementById('endAmPm')?.value || 'AM';
+      const startTime = convertTo24Hour(startH, startM, startAmPm);
+      const endTime = convertTo24Hour(endH, endM, endAmPm);
+      const notifyH = getVal('notifyTimeHourInput') || '00';
+      const notifyM = getVal('notifyTimeMinInput') || '00';
+      const notifyTime = `${notifyH.padStart(2,'0')}:${notifyM.padStart(2,'0')}`;
+      if (!appData.notes[currentSelectedDay]) appData.notes[currentSelectedDay] = [];
+      appData.notes[currentSelectedDay].push({
+        id: 'note_' + Date.now(), text, icon, startTime, endTime, notifyTime,
+        isStudy: false, category: '予定・メモ'
+      });
+      saveLocalStorage();
+      renderCalendar();
+      closeModal('stickyAddModal');
+      alert('予定を追加しました！');
+    } catch (err) {
+      console.error('addNoteToSelectedDay error:', err);
+      alert('書き込みに失敗しました。もう一度お試しください。');
+    }
+  }
+  function setActiveTimeInput(inputId) {
+    activeTimeInputId = inputId;
+    document.querySelectorAll('.time-input-field').forEach(el => el.classList.remove('active-field'));
+    document.getElementById(inputId).classList.add('active-field');
+  }
+
+  function pressDigit(val) {
+    const target = document.getElementById(activeTimeInputId);
+    if (!target) return;
+    if (val === 'CLR') target.value = '';
+    else if (val === 'BS') target.value = target.value.slice(0, -1);
+    else {
+      if (target.value.length < 2) target.value += val;
+    }
+  }
+
+  function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+  function getSubjectIconForStudyRecord(subjectName) {
+    const name = String(subjectName || '').trim();
+    if (name && appData.subjectIcons && typeof appData.subjectIcons === 'object' && appData.subjectIcons[name]) {
+      return appData.subjectIcons[name];
+    }
+    return appData.customIcons['study'] || '🏆';
+  }
+</script>
+</body>
+</html>
