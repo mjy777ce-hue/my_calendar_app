@@ -630,6 +630,12 @@ overflow:hidden;
             <input type="text" id="notifyTimeMinInput" onfocus="this.select()" class="time-input-field" placeholder="50" maxlength="2" onclick="setActiveTimeInput('notifyTimeMinInput')">
           </div>
         </div>
+        <label style="display:flex; align-items:center; gap:5px; margin-top:5px; font-size:10px; color:#555; cursor:pointer;">
+          <input type="checkbox" id="noteNotifyEnabled"> 🔔 この付箋を通知する
+        </label>
+        <div style="font-size:9px; color:#888; line-height:1.35; margin:2px 0 0 20px;">
+          ※ チェックした付箋だけ通知します。通知の時刻・種類は「設定」の通知設定を使用します。
+        </div>
       </div>
       <div style="text-align:right;">
         <button class="add-note-btn" style="width:auto; padding:4px 14px; margin:0; font-size:11px;" onclick="addNoteToSelectedDay()">OK</button>
@@ -724,6 +730,12 @@ overflow:hidden;
           </div>
         </div>
       </div>
+      <label style="display:flex; align-items:center; gap:5px; margin:5px 0 2px; font-size:10px; color:#555; cursor:pointer;">
+        <input type="checkbox" id="popupNoteNotifyEnabled"> 🔔 この付箋を通知する
+      </label>
+      <div style="font-size:9px; color:#888; line-height:1.35; margin:0 0 3px 20px;">
+        ※ チェックした付箋だけ通知します。通知の時刻・種類は「設定」の通知設定を使用します。
+      </div>
       
       <button class="add-note-btn" style="margin:4px 0 0 0; padding:4px;" onclick="addNoteFromDatePopup()">付箋を追加</button>
     </div>
@@ -785,7 +797,6 @@ overflow:hidden;
         <div style="font-size:9px; color:#777; margin:2px 0 5px;">※ アイコンをタップ → ＜📁画像ファイルを選ぶ＞ または既存のアイコンを選択 → ＜決定＞</div>
         <div style="font-size:10px; color:#555; margin:7px 0 4px; font-weight:bold;">📚 登録した学習内容（タップ／クリックで表示・選択）</div>
         <div id="registeredSubjectsList" class="registered-subjects-list"></div>
-        <div class="timer-selected-hint" id="timerSelectedStudyHint">現在の選択：英語学習</div>
         <div class="trash-area" id="studySubjectTrashBin" style="margin-top:6px; padding:7px;" onclick="deleteSelectedStudySubject()" ondragover="allowDrop(event)" ondragleave="handleDragLeave(event)" ondrop="handleStudySubjectDrop(event)">🗑️ 選択した学習内容を削除</div>
       </div>
 
@@ -888,9 +899,10 @@ overflow:hidden;
       <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">※既存のアイコンは生成AIが作成したものです。</label>
 </div>
     <div style="margin-bottom:12px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#555;">
-      ─予定書き込み欄に何も記入しなくてもアイコンだけ選んで＜付箋を追加＞を押せば記録できます。─<br>
-      ─各コーナーに表示された予定付箋をタップすると、長めの日記やメモを大きく表示して読むことができます。─<br>
-      ─＜アイコンを選ぶ・作る＞で画像ファイルから追加したユーザー画像は、プリセットスタンプとして好きな数だけ保存できます。不要になった画像は、画像をタップして選択したあと、＜🗑️ 選択したユーザー画像を削除＞で削除できます。─
+      <strong style="color:var(--main-color);">🖼️ ＜アイコンを選ぶ・作る＞について</strong><br>
+      ○ 予定書き込み欄に何も記入しなくても、アイコンだけ選んで＜付箋を追加＞を押せば記録できます。<br>
+      ○ ＜アイコンを選ぶ・作る＞で画像ファイルから追加したユーザー画像は、プリセットスタンプとして好きな数だけ保存できます。不要になった画像は、画像をタップして選択したあと、＜🗑️ 選択したユーザー画像を削除＞で削除できます。<br>
+      ○ 各コーナーに表示された予定付箋をタップすると、長めの日記やメモを大きく表示して読むことができます。
     </div>
     <div style="margin-bottom:12px;">
       <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🎨 カレンダーテーマカラー:</label>
@@ -995,22 +1007,38 @@ overflow:hidden;
       </label>
     </div>
 <div style="margin-top:8px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; text-align:left; font-size:10px;">
-        <div style="font-weight:bold; color:var(--main-color); margin-bottom:5px;">🔔 通知設定（学習記録以外の予定）</div>
+        <div style="font-weight:bold; color:var(--main-color); margin-bottom:5px;">🔔 通知設定（通知する付箋の通知方法）</div>
         <label style="display:flex; align-items:center; gap:5px; margin-bottom:5px; cursor:pointer;">
-          <input type="checkbox" id="popupNotifyEnabled"> 通知する
+          <input type="checkbox" id="popupNotifyEnabled" onchange="handleNotificationToggle(this)"> 通知する
+          <button type="button" onclick="testBrowserNotification()" style="margin-left:auto; padding:3px 7px; font-size:9px; border:1px solid #ddd; border-radius:5px; background:#fff; cursor:pointer;">🔔 通知テスト</button>
         </label>
+        <div style="display:flex; align-items:center; gap:5px; margin:2px 0 7px 22px;">
+          <span style="white-space:nowrap;">予定の</span>
+          <select id="popupNotifyBeforeMinutes" onchange="saveNotificationSettingsFromUI()" style="padding:3px; font-size:10px; border:1px solid #ddd; border-radius:5px;">
+            <option value="">指定なし</option>
+            <option value="0">予定時刻ぴったり</option>
+            <option value="5">5分前</option>
+            <option value="10">10分前</option>
+            <option value="15">15分前</option>
+            <option value="30" selected>30分前</option>
+            <option value="60">1時間前</option>
+            <option value="120">2時間前</option>
+            <option value="1440">1日前</option>
+          </select>
+          <span>に通知</span>
+        </div>
         <label style="display:flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer;">
-          <input type="checkbox" id="popupNotifyWeekBefore"> 一週間前に通知
+          <input type="checkbox" id="popupNotifyWeekBefore" onchange="saveNotificationSettingsFromUI()"> 一週間前に通知
         </label>
         <label style="display:flex; align-items:center; gap:5px; margin-bottom:6px; cursor:pointer;">
-          <input type="checkbox" id="popupNotifyPreviousMorning"> 前日の朝（08:00）に通知
+          <input type="checkbox" id="popupNotifyPreviousMorning" onchange="saveNotificationSettingsFromUI()"> 前日の朝（08:00）に通知
         </label>
         <label style="display:flex; align-items:center; gap:5px; margin-bottom:3px; cursor:pointer;">
-          <input type="checkbox" id="popupNotifyCustom"> 任意の日・時刻に通知
+          <input type="checkbox" id="popupNotifyCustom" onchange="saveNotificationSettingsFromUI()"> 任意の日・時刻に通知
         </label>
         <div style="display:flex; align-items:center; gap:4px; margin-left:22px;">
-          <input type="text" id="popupNotifyCustomDate" placeholder="YYYY/MM/DD" maxlength="10" style="width:92px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
-          <input type="text" id="popupNotifyCustomTime" placeholder="08:00" maxlength="5" style="width:54px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
+          <input type="text" id="popupNotifyCustomDate" placeholder="YYYY/MM/DD" onchange="saveNotificationSettingsFromUI()" maxlength="10" style="width:92px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
+          <input type="text" id="popupNotifyCustomTime" placeholder="08:00" maxlength="5" onchange="saveNotificationSettingsFromUI()" style="width:54px; padding:4px; font-size:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
         </div>
         <div style="display:flex; align-items:center; gap:5px; margin-top:7px;">
           <span style="font-size:10px; font-weight:bold; color:#555;">🔔 通知音：</span>
@@ -1019,7 +1047,7 @@ overflow:hidden;
           <button type="button" onclick="testNotificationSound()" style="margin-left:auto; padding:3px 6px; font-size:9px; border:1px solid #ddd; border-radius:5px; background:#fff; cursor:pointer;">試聴</button>
         </div>
         <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 音ありの場合、アプリが動作中のときに短い予定通知音を鳴らします。スマホのOS通知欄の音は端末・ブラウザの通知設定が優先されます。</div>
-        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ ブラウザの通知を許可している場合、予定時刻になると通知します。ブラウザを完全に閉じている場合は通知されません。</div>
+        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 各付箋で「この付箋を通知する」にチェックしたものだけ通知します。ブラウザを完全に閉じている場合は通知されません。</div>
       </div>
     <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
       <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🇯🇵 休日・祝日表示設定:</label>
@@ -1071,9 +1099,9 @@ overflow:hidden;
       <span id="cropPreviewPlaceholder" style="font-size:24px;">📷</span>
     </div>
     
-    <input type="file" id="iconImageInput" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" style="display:none;" onchange="handleIconImageUpload(event)">
-    <div style="font-size:11px; color:#666; margin:-2px 0 8px; text-align:left;">スマホでは、端末の「ファイル」などのファイル管理アプリから選べることがあります。対応端末では下のボタンからシステムのファイル選択画面を優先して開きます。</div>
-    <button type="button" class="action-sub-btn" style="background:#fff; margin-bottom:8px;" onclick="chooseIconImageFile()">📁 画像ファイルを選ぶ</button>
+    <input type="file" id="iconImageInput" accept="image/*" style="display:none;" onchange="handleIconImageUpload(event)">
+    <div style="font-size:11px; color:#666; margin:-2px 0 8px; text-align:left;">📁 このボタンは、対応ブラウザでは端末のシステムファイル選択画面を優先して開きます。Googleフォトしか表示される場合は、端末側のファイル選択画面に「ファイル」などのアプリが表示される構成かをご確認ください。</div>
+    <button type="button" class="action-sub-btn" style="background:#fff; margin-bottom:8px;" onclick="chooseIconImageFile()">📁 端末のファイルから画像を選ぶ</button>
 
     <div style="font-size:11px; font-weight:bold; color:#555; margin:6px 0; text-align:left;">プリセットスタンプ:</div>
     <div class="icon-list-grid" id="presetIconGrid"></div>
@@ -1129,6 +1157,7 @@ overflow:hidden;
     weatherForecast: {},
     showRokuyo: true,
     showHoliday: true,
+    notificationSettings: { enabled:false, beforeMinutes:30, weekBefore:false, previousMorning:false, custom:false, customAt:'' },
     userAvatar: '',
     notes: {},
     studyRecords: {},
@@ -1937,6 +1966,18 @@ ${history.length ? history.join(', ') : 'なし'}
       const saved = localStorage.getItem('my_calendar_app_data_v41');
       if (saved) appData = JSON.parse(saved);
       if (!appData.studyRecords) appData.studyRecords = {};
+      if (!appData.notificationSettings || typeof appData.notificationSettings !== 'object') {
+        appData.notificationSettings = { enabled:false, beforeMinutes:30, weekBefore:false, previousMorning:false, custom:false, customAt:'' };
+      } else {
+        appData.notificationSettings = {
+          enabled: !!appData.notificationSettings.enabled,
+          beforeMinutes: appData.notificationSettings.beforeMinutes === undefined ? 30 : appData.notificationSettings.beforeMinutes,
+          weekBefore: !!appData.notificationSettings.weekBefore,
+          previousMorning: !!appData.notificationSettings.previousMorning,
+          custom: !!appData.notificationSettings.custom,
+          customAt: appData.notificationSettings.customAt || ''
+        };
+      }
       if (!appData.customIcons || typeof appData.customIcons !== 'object') appData.customIcons = {};
       if (!Array.isArray(appData.userPresetIcons)) appData.userPresetIcons = [];
       if (!appData.subjectIcons || typeof appData.subjectIcons !== 'object') appData.subjectIcons = {};
@@ -2035,6 +2076,22 @@ ${history.length ? history.join(', ') : 'なし'}
     if (rokuyoBox) rokuyoBox.checked = appData.showRokuyo;
     const holidayBox = document.getElementById('showHolidayCheckbox');
     if (holidayBox) holidayBox.checked = appData.showHoliday;
+    const ns = appData.notificationSettings || { enabled:false, beforeMinutes:30, weekBefore:false, previousMorning:false, custom:false, customAt:'' };
+    const notifyEnabled = document.getElementById('popupNotifyEnabled');
+    const notifyBefore = document.getElementById('popupNotifyBeforeMinutes');
+    const notifyWeek = document.getElementById('popupNotifyWeekBefore');
+    const notifyMorning = document.getElementById('popupNotifyPreviousMorning');
+    const notifyCustom = document.getElementById('popupNotifyCustom');
+    const notifyDate = document.getElementById('popupNotifyCustomDate');
+    const notifyTime = document.getElementById('popupNotifyCustomTime');
+    if (notifyEnabled) notifyEnabled.checked = !!ns.enabled;
+    if (notifyBefore) notifyBefore.value = ns.beforeMinutes === '' ? '' : String(ns.beforeMinutes ?? 30);
+    if (notifyWeek) notifyWeek.checked = !!ns.weekBefore;
+    if (notifyMorning) notifyMorning.checked = !!ns.previousMorning;
+    if (notifyCustom) notifyCustom.checked = !!ns.custom;
+    const parts = String(ns.customAt || '').split('T');
+    if (notifyDate) notifyDate.value = parts[0] ? parts[0].replace(/-/g,'/') : '';
+    if (notifyTime) notifyTime.value = parts[1] ? parts[1].slice(0,5) : '';
     if (appData.userAvatar) document.getElementById('userAvatarImg').src = appData.userAvatar;
     const providerSelect = document.getElementById('aiProviderSelect');
     if (providerSelect) providerSelect.value = getSelectedAiProvider();
@@ -2186,6 +2243,26 @@ cell.appendChild(iconGrid);
     return cell;
   }
 
+  function saveNotificationSettingsFromUI() {
+    try {
+      const dateValue = document.getElementById('popupNotifyCustomDate')?.value.trim() || '';
+      const timeValue = document.getElementById('popupNotifyCustomTime')?.value.trim() || '';
+      const customChecked = !!document.getElementById('popupNotifyCustom')?.checked;
+      let customAt = '';
+      if (customChecked && dateValue && timeValue) customAt = normalizeNotificationDateTime(dateValue, timeValue) || '';
+      const beforeValue = document.getElementById('popupNotifyBeforeMinutes')?.value ?? '';
+      appData.notificationSettings = {
+        enabled: !!document.getElementById('popupNotifyEnabled')?.checked,
+        beforeMinutes: beforeValue === '' ? '' : Number(beforeValue),
+        weekBefore: !!document.getElementById('popupNotifyWeekBefore')?.checked,
+        previousMorning: !!document.getElementById('popupNotifyPreviousMorning')?.checked,
+        custom: customChecked,
+        customAt
+      };
+      saveLocalStorage();
+    } catch(e) {}
+  }
+
   function openDatePopupModal(dateStr) {
     currentSelectedDay = dateStr;
     document.getElementById('datePopupTitle').innerText = `${dateStr}・今日の予定・日記など`;
@@ -2194,22 +2271,29 @@ cell.appendChild(iconGrid);
     document.getElementById('popupStartTimeMin').value = '';
     document.getElementById('popupEndTimeHour').value = '';
     document.getElementById('popupEndTimeMin').value = '';
+    const popupNoteNotifyEnabled = document.getElementById('popupNoteNotifyEnabled');
+    if (popupNoteNotifyEnabled) popupNoteNotifyEnabled.checked = false;
     document.getElementById('popupStartAmPm').value = 'AM';
     document.getElementById('popupEndAmPm').value = 'AM';
     document.querySelectorAll('input[name="popupTimeFormat"]').forEach(r => { r.checked = r.value === '24'; });
     togglePopupTimeFormat('24');
     const popupNotifyEnabled = document.getElementById('popupNotifyEnabled');
+    const popupNotifyBeforeMinutes = document.getElementById('popupNotifyBeforeMinutes');
     const popupNotifyWeekBefore = document.getElementById('popupNotifyWeekBefore');
     const popupNotifyPreviousMorning = document.getElementById('popupNotifyPreviousMorning');
     const popupNotifyCustom = document.getElementById('popupNotifyCustom');
     const popupNotifyCustomDate = document.getElementById('popupNotifyCustomDate');
     const popupNotifyCustomTime = document.getElementById('popupNotifyCustomTime');
-    if (popupNotifyEnabled) popupNotifyEnabled.checked = false;
-    if (popupNotifyWeekBefore) popupNotifyWeekBefore.checked = false;
-    if (popupNotifyPreviousMorning) popupNotifyPreviousMorning.checked = false;
-    if (popupNotifyCustom) popupNotifyCustom.checked = false;
-    if (popupNotifyCustomDate) popupNotifyCustomDate.value = '';
-    if (popupNotifyCustomTime) popupNotifyCustomTime.value = '';
+    // 設定画面で保存した通知設定を、新しい予定の初期値として引き継ぎます。
+    const ns = appData.notificationSettings || { enabled:false, beforeMinutes:30, weekBefore:false, previousMorning:false, custom:false, customAt:'' };
+    if (popupNotifyEnabled) popupNotifyEnabled.checked = !!ns.enabled;
+    if (popupNotifyBeforeMinutes) popupNotifyBeforeMinutes.value = ns.beforeMinutes === '' ? '' : String(ns.beforeMinutes ?? 30);
+    if (popupNotifyWeekBefore) popupNotifyWeekBefore.checked = !!ns.weekBefore;
+    if (popupNotifyPreviousMorning) popupNotifyPreviousMorning.checked = !!ns.previousMorning;
+    if (popupNotifyCustom) popupNotifyCustom.checked = !!ns.custom;
+    const nsParts = String(ns.customAt || '').split('T');
+    if (popupNotifyCustomDate) popupNotifyCustomDate.value = nsParts[0] ? nsParts[0].replace(/-/g,'/') : '';
+    if (popupNotifyCustomTime) popupNotifyCustomTime.value = nsParts[1] ? nsParts[1].slice(0,5) : '';
     renderDatePopupNotesList();
     updateNotificationSoundUI();
     openModal('datePopupModal');
@@ -2354,7 +2438,21 @@ cell.appendChild(iconGrid);
 
   function testNotificationSound() { playScheduleNotificationSound(); }
 
-  function requestNotificationPermissionIfNeeded() {
+  async function testBrowserNotification() {
+    const ok = await requestNotificationPermissionIfNeeded();
+    if (!ok) return;
+    try {
+      const n = new Notification('📅 カレンダー通知テスト', {
+        body: '通知が正常に表示されれば、ブラウザの通知機能は動作しています。',
+        tag: 'my-calendar-test-' + Date.now()
+      });
+      setTimeout(() => { try { n.close(); } catch(e) {} }, 8000);
+    } catch(e) {
+      alert('通知を表示できませんでした。GitHub PagesなどHTTPS上でお試しください。');
+    }
+  }
+
+  async function requestNotificationPermissionIfNeeded() {
     if (!('Notification' in window)) {
       alert('このブラウザは通知機能に対応していません。');
       return false;
@@ -2364,10 +2462,26 @@ cell.appendChild(iconGrid);
       alert('ブラウザの通知が拒否されています。ブラウザ設定から通知を許可してください。');
       return false;
     }
-    Notification.requestPermission().then(permission => {
-      if (permission !== 'granted') alert('通知を受け取るにはブラウザの通知を許可してください。');
-    }).catch(() => {});
-    return false;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('通知を受け取るにはブラウザの通知を許可してください。');
+        return false;
+      }
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  async function handleNotificationToggle(checkbox) {
+    if (!checkbox.checked) {
+      saveNotificationSettingsFromUI();
+      return;
+    }
+    const ok = await requestNotificationPermissionIfNeeded();
+    if (!ok) checkbox.checked = false;
+    saveNotificationSettingsFromUI();
   }
 
   function getNotificationEventsForNote(dateStr, note) {
@@ -2380,6 +2494,11 @@ cell.appendChild(iconGrid);
     const base = new Date(`${dateStr}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
     if (Number.isNaN(base.getTime())) return events;
 
+    if (note.notification.beforeMinutes !== undefined && note.notification.beforeMinutes !== '' && Number(note.notification.beforeMinutes) >= 0) {
+      const mins = Number(note.notification.beforeMinutes);
+      const d = new Date(base); d.setMinutes(d.getMinutes() - mins);
+      events.push({ key:'before:' + mins, at:d, label: mins === 0 ? '予定時刻ちょうどの通知' : `予定の${mins >= 1440 && mins % 1440 === 0 ? (mins/1440) + '日前' : mins >= 60 && mins % 60 === 0 ? (mins/60) + '時間前' : mins + '分前'}通知` });
+    }
     if (note.notification.weekBefore) {
       const d = new Date(base); d.setDate(d.getDate() - 7);
       events.push({ key:'weekBefore', at:d, label:'一週間前通知' });
@@ -2409,10 +2528,23 @@ cell.appendChild(iconGrid);
           if (eventTime <= now && now - eventTime < 70 * 1000 && !note.notification.sent[sentKey]) {
             try {
               playScheduleNotificationSound();
-              new Notification(`📅 ${note.text}`, {
+              const title = `📅 ${note.text || '予定の通知'}`;
+              const options = {
                 body: `${dateStr} ${note.startTime || ''}${note.endTime ? '〜' + note.endTime : ''}\n${ev.label}`,
-                tag: `my-calendar-${note.id}-${ev.key}`
-              });
+                tag: `my-calendar-${note.id}-${ev.key}`,
+                renotify: true
+              };
+              // Service Worker が登録済みなら showNotification を優先し、
+              // スマホの通知欄に出るブラウザ通知として表示します。
+              // 未登録でも通常の Notification API にフォールバックします。
+              if (navigator.serviceWorker?.ready) {
+                navigator.serviceWorker.ready.then(reg => {
+                  if (reg && reg.showNotification) return reg.showNotification(title, options);
+                  return new Notification(title, options);
+                }).catch(() => { try { new Notification(title, options); } catch(e) {} });
+              } else {
+                new Notification(title, options);
+              }
             } catch(e) {}
             note.notification.sent[sentKey] = true;
             changed = true;
@@ -2483,17 +2615,61 @@ cell.appendChild(iconGrid);
           : `${String(parseInt(endHRaw || '0', 10) || 0).padStart(2,'0')}:${String(parseInt(endMRaw || '0', 10) || 0).padStart(2,'0')}`;
       }
 
+      // 通知設定も、この予定そのものに保存します。
+      // これまでは画面上でチェックしても保存時に notification が常に false になっていたため、
+      // 通知判定側に予定が届かない状態でした。
+      const notifyEnabled = !!document.getElementById('popupNotifyEnabled')?.checked;
+      const notifyBeforeMinutesRaw = document.getElementById('popupNotifyBeforeMinutes')?.value || '';
+      const notifyBeforeMinutes = notifyBeforeMinutesRaw === '' ? '' : Number(notifyBeforeMinutesRaw);
+      const notifyWeekBefore = !!document.getElementById('popupNotifyWeekBefore')?.checked;
+      const notifyPreviousMorning = !!document.getElementById('popupNotifyPreviousMorning')?.checked;
+      const notifyCustom = !!document.getElementById('popupNotifyCustom')?.checked;
+      const notifyCustomDate = document.getElementById('popupNotifyCustomDate')?.value || '';
+      const notifyCustomTime = document.getElementById('popupNotifyCustomTime')?.value || '';
+      let customAt = '';
+      if (notifyCustom) {
+        customAt = normalizeNotificationDateTime(notifyCustomDate, notifyCustomTime);
+        if (!customAt) {
+          alert('任意通知を使う場合は、YYYY/MM/DD と HH:MM を正しく入力してください。');
+          return;
+        }
+      }
+      if (notifyEnabled) requestNotificationPermissionIfNeeded();
+
       const icon = appData.customIcons['popupNote'] || '📌';
+
+      // 通知ON/OFFは「この付箋」単位で保存します。
+      // 通知の時刻・種類は設定画面の通知設定を初期値として使用します。
+      const perNoteNotify = !!document.getElementById('popupNoteNotifyEnabled')?.checked;
+      const ns = appData.notificationSettings || {};
+      const perNoteBeforeMinutes =
+        ns.beforeMinutes === undefined ? 30 : ns.beforeMinutes;
+      const perNoteWeekBefore = perNoteNotify ? !!ns.weekBefore : false;
+      const perNotePreviousMorning = perNoteNotify ? !!ns.previousMorning : false;
+      const perNoteCustomAt = perNoteNotify && ns.custom ? (ns.customAt || '') : '';
+
       if (!appData.notes[currentSelectedDay]) appData.notes[currentSelectedDay] = [];
       appData.notes[currentSelectedDay].push({
         id: 'note_' + Date.now(),
-        text, icon, startTime, endTime, notifyTime: '08:00',
-        notification: { enabled:false, weekBefore:false, previousMorning:false, customAt:'', sent:{} },
+        text, icon, startTime, endTime,
+        notifyTime: notifyCustomTime || '08:00',
+        notification: {
+          enabled: perNoteNotify,
+          beforeMinutes: perNoteNotify ? perNoteBeforeMinutes : '',
+          weekBefore: perNoteWeekBefore,
+          previousMorning: perNotePreviousMorning,
+          customAt: perNoteCustomAt,
+          sent: {}
+        },
         isStudy:false, category:'予定・メモ'
       });
       saveLocalStorage();
       renderDatePopupNotesList();
       renderCalendar();
+      // 一週間・1ヶ月表示から登録した予定も、同じ日付の縦長スケジュールへ即時反映します。
+      if (document.getElementById('verticalScheduleModal')?.style.display === 'flex') {
+        renderVerticalSchedule();
+      }
       alert('予定を追加しました！');
     } catch (err) {
       console.error('addNoteFromDatePopup error:', err);
@@ -2548,16 +2724,34 @@ cell.appendChild(iconGrid);
     }catch(e){ if(status) status.textContent=`⚠️ ${e.message||e}`; alert(`天気予報の場所を設定できませんでした。\n${e.message||e}`); }
   }
 
-  function useCurrentWeatherLocation(){
+  async function useCurrentWeatherLocation(){
     if(!navigator.geolocation){ alert('このブラウザでは現在地を取得できません。場所名を入力してください。'); return; }
-    const status=document.getElementById('weatherLocationStatus'); if(status) status.textContent='📱 現在地を取得しています…';
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      appData.weatherLocation={name:'現在地',latitude:pos.coords.latitude,longitude:pos.coords.longitude};
-      appData.weatherForecast={}; saveLocalStorage(); updateSettingsUI(); await fetchWeatherForecast();
-    }, err=>{
-      if(status) status.textContent='⚠️ 現在地を取得できませんでした。場所名を入力してください。';
-      alert('現在地を取得できませんでした。ブラウザの位置情報許可を確認するか、場所名を入力してください。');
-    }, {enableHighAccuracy:true,timeout:10000,maximumAge:300000});
+    const status=document.getElementById('weatherLocationStatus');
+    if(status) status.textContent='📱 現在地を取得しています…';
+    try {
+      const pos = await new Promise((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(resolve,reject,{
+          enableHighAccuracy:false,
+          timeout:15000,
+          maximumAge:300000
+        });
+      });
+      const lat=Number(pos.coords.latitude), lon=Number(pos.coords.longitude);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error('位置情報を取得できませんでした。');
+      appData.weatherLocation={name:'現在地',latitude:lat,longitude:lon};
+      appData.weatherForecast={};
+      saveLocalStorage();
+      updateSettingsUI();
+      await fetchWeatherForecast();
+    } catch(err) {
+      if(status) status.textContent='⚠️ 現在地を取得できませんでした。ブラウザの位置情報許可を確認してください。';
+      let message='現在地を取得できませんでした。';
+      if(err && err.code===1) message+='ブラウザの位置情報の許可が必要です。';
+      else if(err && err.code===2) message+='位置情報を確認できませんでした。';
+      else if(err && err.code===3) message+='位置情報の取得がタイムアウトしました。';
+      message+='\nうまくいかない場合は「市区町村・都市名」を入力して場所を設定できます。';
+      alert(message);
+    }
   }
 
   async function fetchWeatherForecast(){
@@ -2652,6 +2846,12 @@ function openTodayDatePopup() {
 }
 
   function openTodayTimerModal() {
+    // 新しいタイマー画面を開いたときは、前回の計測値を持ち越さないようにします。
+    if (!isTimerRunning) {
+      secondsElapsed = 0;
+      timerActiveCategory = '';
+      updateTimerDisplay();
+    }
     // カレンダー上の日付からタイマーを開いた場合は、その日を自動的に記録先にします。
     // 日付がまだ選択されていない場合だけ、現在表示中のカレンダー日を使用します。
     const fallbackDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
@@ -2684,6 +2884,11 @@ function openTodayDatePopup() {
   }
 
   function openTodayTimerModalFromDate(dateStr) {
+    if (!isTimerRunning) {
+      secondsElapsed = 0;
+      timerActiveCategory = '';
+      updateTimerDisplay();
+    }
     currentSelectedDay = dateStr || '';
     if (/^\d{4}-\d{2}-\d{2}$/.test(currentSelectedDay)) {
       const p = currentSelectedDay.split('-').map(Number);
@@ -2732,6 +2937,10 @@ function openTodayDatePopup() {
 
   function openVerticalScheduleModalFromMain() {
     closeModal('stickyAddModal');
+    // 一週間・1ヶ月表示で最後に選択した日付をそのまま引き継ぎます。
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(currentSelectedDay || '')) {
+      currentSelectedDay = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+    }
     openModal('verticalScheduleModal');
     renderVerticalSchedule();
   }
@@ -2883,7 +3092,8 @@ function openTodayDatePopup() {
     clearInterval(timerInterval);
     document.getElementById('startBtn').style.backgroundColor = '#2ecc71';
 
-    if (secondsElapsed > 0) {
+    // Start → Stop が1秒未満でも「実施した」記録を残します。
+    if (secondsElapsed >= 0) {
       const hours = Math.floor(secondsElapsed / 3600);
       const mins = Math.floor((secondsElapsed % 3600) / 60);
       const secs = secondsElapsed % 60;
@@ -3086,8 +3296,10 @@ function openTodayDatePopup() {
       contentDiv.className = 'schedule-content';
 
       const notes = (appData.notes[todayStr] || []).filter(n => {
-        if (!n.startTime) return false;
-        return n.startTime.startsWith(String(h).padStart(2, '0'));
+        if (!n || n.isStudy) return false;
+        const t = String(n.startTime || '').trim();
+        // 時刻が入力されている予定は、その開始時刻の「時」に表示します。
+        return /^\d{2}:\d{2}$/.test(t) && Number(t.slice(0,2)) === h;
       });
 
       notes.forEach(note => {
@@ -3140,6 +3352,51 @@ function openTodayDatePopup() {
       });
 
       row.onclick = () => openStickyModalWithDate(todayStr, true);
+      row.appendChild(contentDiv);
+      list.appendChild(row);
+    }
+
+    // 時刻未設定の予定も縦型スケジュールから消えないよう、最後にまとめて表示します。
+    const untimed = (appData.notes[todayStr] || []).filter(n => n && !n.isStudy && !/^\d{2}:\d{2}$/.test(String(n.startTime || '').trim()));
+    if (untimed.length) {
+      const row = document.createElement('div');
+      row.className = 'schedule-hour-row';
+      const timeLbl = document.createElement('div');
+      timeLbl.className = 'schedule-time-lbl';
+      timeLbl.innerText = '時間未設定';
+      row.appendChild(timeLbl);
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'schedule-content';
+      untimed.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'schedule-sticky-card';
+        if (selectedScheduleIdForDelete === note.id) card.classList.add('selected-trash');
+        const mainSpan = document.createElement('span');
+        mainSpan.style.cssText = 'display:flex; align-items:center; gap:4px; min-width:0; word-break:break-word;';
+        const iconValue = note.icon || '📌';
+        if (typeof iconValue === 'string' && (/^data:image\//i.test(iconValue.trim()) || /^https?:\/\//i.test(iconValue.trim()))) {
+          const img = document.createElement('img');
+          img.src = iconValue.trim();
+          img.alt = '';
+          img.style.cssText = 'width:22px;height:22px;object-fit:cover;border-radius:50%;flex:0 0 22px;display:block;';
+          mainSpan.appendChild(img);
+        } else {
+          const iconText = document.createElement('span');
+          iconText.textContent = iconValue;
+          mainSpan.appendChild(iconText);
+        }
+        const noteText = document.createElement('span');
+        noteText.textContent = ` ${note.text || ''}`;
+        noteText.style.cssText = 'min-width:0; word-break:break-word;';
+        mainSpan.appendChild(noteText);
+        const selectSpan = document.createElement('span');
+        selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
+        selectSpan.textContent = '選択';
+        selectSpan.onclick = (event) => { event.stopPropagation(); selectScheduleItem(note.id); };
+        card.append(mainSpan, selectSpan);
+        card.onclick = (e) => { e.stopPropagation(); openNoteDetail(note.id); };
+        contentDiv.appendChild(card);
+      });
       row.appendChild(contentDiv);
       list.appendChild(row);
     }
@@ -3751,6 +4008,29 @@ function openTodayDatePopup() {
   }
   function refreshUserPresetIconSlot() { renderPresetIconGrid(); }
   async function chooseIconImageFile() {
+    // Chrome系の対応ブラウザでは、Web標準のファイル選択画面を優先します。
+    // これにより、通常の写真ピッカーではなく「ファイル」側へ進める環境があります。
+    if (window.isSecureContext && 'showOpenFilePicker' in window) {
+      try {
+        const handles = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{
+            description: '画像ファイル',
+            accept: {
+              'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp']
+            }
+          }]
+        });
+        if (handles && handles[0]) {
+          const file = await handles[0].getFile();
+          if (file) handleIconFile(file);
+        }
+        return;
+      } catch (err) {
+        // キャンセル時は何もしません。未対応ブラウザでは下の方式へ。
+        if (err && err.name === 'AbortError') return;
+      }
+    }
     const input = document.getElementById('iconImageInput');
     if (input) { input.value = ''; input.click(); }
   }
@@ -3834,6 +4114,8 @@ function openTodayDatePopup() {
     document.getElementById('startTimeMinInput').value = '';
     document.getElementById('endTimeHourInput').value = '';
     document.getElementById('endTimeMinInput').value = '';
+    const noteNotifyEnabled = document.getElementById('noteNotifyEnabled');
+    if (noteNotifyEnabled) noteNotifyEnabled.checked = false;
     document.getElementById('notifyTimeHourInput').value = '08';
     document.getElementById('notifyTimeMinInput').value = '50';
     document.querySelectorAll('input[name="globalTimeFormat"]').forEach(r => {
@@ -3864,13 +4146,31 @@ function openTodayDatePopup() {
       const notifyH = getVal('notifyTimeHourInput') || '00';
       const notifyM = getVal('notifyTimeMinInput') || '00';
       const notifyTime = `${notifyH.padStart(2,'0')}:${notifyM.padStart(2,'0')}`;
+
+      // 一日縦長スケジュールから作る付箋も、付箋ごとに通知ON/OFFを保存します。
+      const perNoteNotify = !!document.getElementById('noteNotifyEnabled')?.checked;
+      const ns = appData.notificationSettings || {};
+      const perNoteBeforeMinutes =
+        ns.beforeMinutes === undefined ? 30 : ns.beforeMinutes;
+
       if (!appData.notes[currentSelectedDay]) appData.notes[currentSelectedDay] = [];
       appData.notes[currentSelectedDay].push({
         id: 'note_' + Date.now(), text, icon, startTime, endTime, notifyTime,
+        notification: {
+          enabled: perNoteNotify,
+          beforeMinutes: perNoteNotify ? perNoteBeforeMinutes : '',
+          weekBefore: perNoteNotify ? !!ns.weekBefore : false,
+          previousMorning: perNoteNotify ? !!ns.previousMorning : false,
+          customAt: perNoteNotify && ns.custom ? (ns.customAt || '') : '',
+          sent: {}
+        },
         isStudy: false, category: '予定・メモ'
       });
       saveLocalStorage();
       renderCalendar();
+      if (document.getElementById('verticalScheduleModal')?.style.display === 'flex') {
+        renderVerticalSchedule();
+      }
       closeModal('stickyAddModal');
       alert('予定を追加しました！');
     } catch (err) {
