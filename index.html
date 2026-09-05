@@ -1047,7 +1047,7 @@ overflow:hidden;
           <button type="button" onclick="testNotificationSound()" style="margin-left:auto; padding:3px 6px; font-size:9px; border:1px solid #ddd; border-radius:5px; background:#fff; cursor:pointer;">試聴</button>
         </div>
         <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 音ありの場合、アプリが動作中のときに短い予定通知音を鳴らします。スマホのOS通知欄の音は端末・ブラウザの通知設定が優先されます。</div>
-        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 各付箋で「この付箋を通知する」にチェックしたものだけ通知します。ブラウザを完全に閉じている場合は通知されません。</div>
+        <div style="font-size:9px; color:#777; margin-top:4px; line-height:1.4;">※ 各付箋で「この付箋を通知する」にチェックしたものだけ通知します。現在のバージョンでは、パソコンのブラウザ通知は利用できますが、スマートフォンでは通知が表示されない場合があります。また、ブラウザを完全に閉じている場合は通知されません。</div>
       </div>
     <div style="margin-bottom:12px; border-top:1px dashed #ddd; padding-top:8px;">
       <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">🇯🇵 休日・祝日表示設定:</label>
@@ -2236,6 +2236,7 @@ cell.appendChild(iconGrid);
 
     // メインカレンダーの日付セルをタップしたときは通常の予定入力を開く。
     cell.onclick = function() {
+      // 一週間・1ヶ月表示で選択した日付を、予定入力・一日縦長スケジュールで共有します。
       currentSelectedDay = dateStr;
       openDatePopupModal(dateStr);
     };
@@ -2937,7 +2938,8 @@ function openTodayDatePopup() {
 
   function openVerticalScheduleModalFromMain() {
     closeModal('stickyAddModal');
-    // 一週間・1ヶ月表示で最後に選択した日付をそのまま引き継ぎます。
+    // 一週間・1ヶ月表示で最後に選択した日付を、そのまま一日縦長スケジュールへ引き継ぎます。
+    // 選択日がない場合だけ、現在表示中のカレンダーの日付を使用します。
     if (!/^\d{4}-\d{2}-\d{2}$/.test(currentSelectedDay || '')) {
       currentSelectedDay = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
     }
