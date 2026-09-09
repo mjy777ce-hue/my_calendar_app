@@ -2183,11 +2183,24 @@ ${history.length ? history.join(', ') : 'なし'}
       clearInterval(timerInterval);
       timerInterval = setInterval(refreshElapsedTimer, 1000);
       refreshElapsedTimer();
+      // タイマー計測中なら、アプリを再表示・再起動した際も
+      // すぐに「学習記録タイマー」画面へ戻します。
+      setTimeout(() => restoreRunningTimerView(), 0);
     }
     checkScheduledNotifications();
     setInterval(checkScheduledNotifications, 30000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshElapsedTimer(); checkScheduledNotifications(); } });
-    window.addEventListener('pageshow', () => { refreshElapsedTimer(); checkScheduledNotifications(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refreshElapsedTimer();
+        checkScheduledNotifications();
+        restoreRunningTimerView();
+      }
+    });
+    window.addEventListener('pageshow', () => {
+      refreshElapsedTimer();
+      checkScheduledNotifications();
+      restoreRunningTimerView();
+    });
     if ('serviceWorker' in navigator && /^https?:$/i.test(location.protocol)) {
       navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service Worker registration failed:',err));
     }
@@ -3308,6 +3321,20 @@ function openTodayDatePopup() {
     saveLocalStorage();
     renderRegisteredSubjects();
     updateTimerSelectedStudyHint();
+  }
+
+  // 学習記録タイマーが計測中なら、別アプリから戻ったときや
+  // ブラウザ/PWAを再表示したときにタイマー画面を優先して表示します。
+  function restoreRunningTimerView() {
+    if (!isTimerRunning) return;
+    const timerModal = document.getElementById('timerModal');
+    if (!timerModal) return;
+    // 他のポップアップを閉じるのではなく、タイマーだけを前面に戻します。
+    // 「別アプリを閉じた後に一週間モードへ飛ぶ」ケースでも、
+    // 計測中ならタイマー画面へ復帰できるようにします。
+    if (timerModal.style.display !== 'flex') {
+      openTodayTimerModal();
+    }
   }
 
   function saveTimerState() {
