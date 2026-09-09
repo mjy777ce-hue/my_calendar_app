@@ -920,7 +920,7 @@ overflow:hidden;
         </div>
       </div>
       <button class="action-sub-btn" onclick="closeModal('timerModal'); openStudyCalendarModal();">📊 ＜学習記録カレンダー＞を開く</button>
-      <button class="action-sub-btn" onclick="closeModal('timerModal'); openActivityChartModal();">📈 ＜一ヶ月の学習縦棒記録＞を開く</button>
+      <button class="action-sub-btn" onclick="openActivityChartFromTimer();">📈 ＜一ヶ月の学習縦棒記録＞を開く</button>
     </div>
   </div>
 </div>
@@ -2082,7 +2082,30 @@ ${history.length ? history.join(', ') : 'なし'}
       saveLanguageHistory();
     } catch (e) {
       console.error('AI word retrieval failed:', e);
-      alert(`${AI_PROVIDER_DEFAULTS[provider]?.name || 'AI'}から新しい単語を取得できませんでした。\n\n${e?.message || e}`);
+
+      // スマートフォンへHTMLを直接保存して使用する場合、AIサービス側で
+      // APIキーの利用元(Origin/Referer)が制限されていると401になることがあります。
+      // その場合でも「次のページ」が止まらないよう、内蔵単語リストへ自動的に切り替えます。
+      const list = languageDatabase[langCode] || [];
+      if (list.length) {
+        if (!Number.isInteger(langCardIndices[langCode])) langCardIndices[langCode] = 0;
+        const currentBuiltIn = list[langCardIndices[langCode]];
+        const currentWord = String(currentBuiltIn?.word || '').trim().toLowerCase();
+        let nextBuiltIn = (langCardIndices[langCode] + 1) % list.length;
+        if (list.length > 1 && currentWord) {
+          let guard = 0;
+          while (String(list[nextBuiltIn]?.word || '').trim().toLowerCase() === currentWord && guard < list.length) {
+            nextBuiltIn = (nextBuiltIn + 1) % list.length;
+            guard++;
+          }
+        }
+        langCardIndices[langCode] = nextBuiltIn;
+        // APIエラーの詳細(401等)は利用者に赤いエラーとして見せず、
+        // 語学学習そのものはそのまま続けられるようにします。
+        renderLangCards();
+      } else {
+        alert(`${AI_PROVIDER_DEFAULTS[provider]?.name || 'AI'}から新しい単語を取得できませんでした。\n\n${e?.message || e}`);
+      }
     } finally {
       aiWordLoading[langCode] = false;
       renderLangCards();
@@ -2618,8 +2641,8 @@ cell.appendChild(iconGrid);
       let voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja')&&hints.some(h=>String(v.name||'').toLowerCase().includes(h.toLowerCase())));
       if(!voice)voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja'));
       if(voice)utter.voice=voice;
-      utter.rate=mode==='voice_male'?0.82:0.68;
-      utter.pitch=mode==='voice_male'?0.55:0.98;
+      utter.rate=mode==='voice_male'?0.78:0.62;
+      utter.pitch=mode==='voice_male'?0.38:0.98;
       utter.volume=mode==='voice_male'?1.0:0.86;
       window.speechSynthesis.cancel();window.speechSynthesis.speak(utter);
     }catch(e){}
@@ -3744,6 +3767,7 @@ function openTodayDatePopup() {
     } return 0;
   }
   function openActivityChartModal(){openModal('activityChartModal');renderActivityChart();}
+  function openActivityChartFromTimer(){ closeModal('timerModal'); openModal('activityChartModal'); renderActivityChart(); }
   function renderActivityChart(){
     const host=document.getElementById('activityChartContainer');if(!host)return;
     const base=studyCurrentDate instanceof Date?new Date(studyCurrentDate):getTodayDateObject(),y=base.getFullYear(),mo=base.getMonth(),days=new Date(y,mo+1,0).getDate();
