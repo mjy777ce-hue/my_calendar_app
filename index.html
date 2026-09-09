@@ -933,7 +933,7 @@ overflow:hidden;
     <input id="editSubjectName" type="text" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:11px;" placeholder="学習内容">
     <div style="margin:8px 0 4px;font-size:10px;color:#666;">アイコン</div>
     <button type="button" class="icon-picker-btn" id="editSubjectIconBtn" style="margin:0 auto;" onclick="openIconModal('subjectEdit')">📚</button>
-    <div style="margin:8px 0 4px;font-size:10px;color:#666;">色（24色）</div>
+    <div style="margin:8px 0 4px;font-size:10px;color:#666;">色（51色）</div>
     <input type="hidden" id="editSubjectColor"><div id="editSubjectColorPalette" style="display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:5px;"></div>
     <button class="add-note-btn" style="margin-top:10px;" onclick="saveEditedSubject()">保存する</button>
   </div>
@@ -994,7 +994,7 @@ overflow:hidden;
 </div>
 
 <!-- 📈 一ヶ月の学習縦棒記録 Modal -->
-<div class="modal-overlay" id="activityChartModal">
+<div class="modal-overlay" id="activityChartModal" style="z-index:1150;">
   <div class="modal-content" style="width:100%; max-width:390px; background:#fff;">
     <span class="close-btn" onclick="closeModal('activityChartModal')">✕</span>
     <h3 style="margin:0 0 8px 0; color:var(--main-color); text-align:center; font-size:15px;">📈 一ヶ月の学習縦棒記録</h3>
@@ -2641,9 +2641,9 @@ cell.appendChild(iconGrid);
       let voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja')&&hints.some(h=>String(v.name||'').toLowerCase().includes(h.toLowerCase())));
       if(!voice)voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja'));
       if(voice)utter.voice=voice;
-      utter.rate=mode==='voice_male'?0.78:0.62;
-      utter.pitch=mode==='voice_male'?0.38:0.98;
-      utter.volume=mode==='voice_male'?1.0:0.86;
+      utter.rate=mode==='voice_male'?0.74:0.60;
+      utter.pitch=mode==='voice_male'?0.18:0.98;
+      utter.volume=mode==='voice_male'?0.94:0.86;
       window.speechSynthesis.cancel();window.speechSynthesis.speak(utter);
     }catch(e){}
   }
@@ -3747,7 +3747,7 @@ function openTodayDatePopup() {
     });
   }
 
-  const ACTIVITY_COLORS=['#BFE3F2','#A8DADC','#C7E9B4','#D7F2BA','#F9E79F','#F6D6A8','#F8C8DC','#E8C7E8','#D8CCF0','#C9D6FF','#BDE0FE','#A2D2FF','#FFAFCC','#FFC8DD','#FFD6A5','#FDFFB6','#CAFFBF','#9BF6FF','#BDB2FF','#D0F4DE','#FDE2E4','#E2F0CB','#CDE7F0','#F4D6CC'];
+  const ACTIVITY_COLORS=['#BFE3F2','#A8DADC','#C7E9B4','#D7F2BA','#F9E79F','#F6D6A8','#F8C8DC','#E8C7E8','#D8CCF0','#C9D6FF','#BDE0FE','#A2D2FF','#FFAFCC','#FFC8DD','#FFD6A5','#FDFFB6','#CAFFBF','#9BF6FF','#BDB2FF','#D0F4DE','#FDE2E4','#E2F0CB','#CDE7F0','#F4D6CC','#000000','#808080','#8B4513','#FF00FF','#FF1493','#FF4500','#FF5F1F','#FF8C00','#FFFF00','#ADFF2F','#39FF14','#00FF00','#00FA9A','#00FFFF','#00E5FF','#1E90FF','#0047FF','#7F00FF','#8A2BE2','#BF00FF','#FF00FF','#FF69B4','#FF007F','#FF2400','#FFEA00','#BFFF00'];
   function getSubjectColor(name){
     const key=String(name||'').trim(); if(!appData.subjectColors||typeof appData.subjectColors!=='object')appData.subjectColors={};
     if(!appData.subjectColors[key]){const names=Object.keys(appData.subjectIcons||{});const i=Math.max(0,names.indexOf(key));appData.subjectColors[key]=ACTIVITY_COLORS[i%ACTIVITY_COLORS.length];}
