@@ -534,7 +534,11 @@ overflow:hidden;
     .activity-legend-dot{width:9px;height:9px;border-radius:50%;border:1px solid rgba(0,0,0,.08);}
     .subject-edit-btn{border:1px solid #ddd;background:#fff;border-radius:5px;padding:3px 5px;font-size:9px;cursor:pointer;color:#666;flex-shrink:0;}
 
-  </style>
+  
+    .hide-era-display .era-display,
+    .hide-era-display .era-year,
+    .hide-era-display .era-label { display:none !important; }
+</style>
 </head>
 <body>
 
@@ -859,6 +863,7 @@ overflow:hidden;
       <div style="margin:6px 0; display:flex; justify-content:center; align-items:center; gap:6px;">
         <input type="text" id="timerRecordDate" placeholder="YYYY/MM/DD" maxlength="10" inputmode="numeric" aria-label="学習記録の日付" style="padding:6px 8px; border-radius:6px; border:1px solid #ddd; font-size:11px; width:110px; text-align:center; box-sizing:border-box;" onchange="setTimerRecordDate(this.value)" onblur="setTimerRecordDate(this.value)">
       </div>
+      <div style="font-size:9px; color:#888; text-align:center; margin:-2px 0 5px;">📅 日付を変更すれば、過去の日の学習記録も手動で追加できます。</div>
       <select id="timerCategorySelect" aria-hidden="true" tabindex="-1" style="display:none;"></select>
       <div class="timer-display" id="timerDisplay">00:00:00</div>
       <div class="timer-btns">
@@ -1008,6 +1013,22 @@ overflow:hidden;
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('settingsModal')">✕</span>
     <h3 style="margin:0 0 12px 0; color:var(--main-color); text-align:center; font-size:15px;">⚙️ アプリ設定</h3>
+      <div style="margin:8px 0; padding:8px; border:1px solid #e5e5e5; border-radius:8px; text-align:left;">
+        <div style="font-weight:bold; font-size:11px; color:var(--main-color); margin-bottom:5px;">📅 元号表示</div>
+        <label style="font-size:10px; color:#555; cursor:pointer;">
+          <input type="checkbox" id="hideEraDisplay" onchange="setEraDisplayMode(this.checked)">
+          元号表示を非表示にする
+        </label>
+      </div>
+
+      <div style="margin:8px 0; padding:8px; border:1px solid #e5e5e5; border-radius:8px; text-align:left;">
+        <div style="font-weight:bold; font-size:11px; color:var(--main-color); margin-bottom:5px;">💾 日記・記録・語学復習ページを保存</div>
+        <div style="font-size:9px; color:#666; line-height:1.5; margin-bottom:6px;">
+          日記・学習記録・語学の復習データをバックアップファイルとして保存できます。USBメモリ等へ保存する場合は、ダウンロード先としてUSBを選んでください。
+        </div>
+        <button type="button" class="action-sub-btn" onclick="exportPersonalRecordsBackup()">💾 保存する</button>
+      </div>
+
     <div style="margin-bottom:12px;">
       <label style="font-size:12px; font-weight:bold; color:#555; display:block; margin-bottom:4px;">※＜学習記録＞をしたい場合は、＜作成＞ボタンを押してください。</label>
 </div>
@@ -1050,6 +1071,7 @@ overflow:hidden;
         <option value="yellow">🌻 Sunset Yellow (イエロー)</option>
         <option value="gray">🌫️ Gray (グレー)</option>
         <option value="black">🖤 Black (黒)</option>
+        <option value="brown">🍫 Chocolate Brown (茶色)</option>
       </select>
     </div>
    <div style="margin-bottom:12px;">
@@ -1230,6 +1252,8 @@ overflow:hidden;
   // 新しい元号になった場合は、ここに「元号名」と「開始日」を1行追加するだけで、
   // その日以降の表示が自動的に新元号へ切り替わります。
   const JAPANESE_ERAS = [
+    // 将来、新しい元号になったら、この行の上に実際の元号名と開始日を追加してください。
+    // 例：{ name: '新元号', start: '20XX-XX-XX' },
     { name: '令和', start: '2019-05-01' },
     { name: '平成', start: '1989-01-08' },
     { name: '昭和', start: '1926-12-25' },
@@ -1251,6 +1275,10 @@ overflow:hidden;
   }
 
   function formatYearMonthWithEra(year, month) {
+    const hideEra = localStorage.getItem('my_calendar_hide_era') === '1';
+    if (hideEra) {
+      return `${year}年 ${month + 1}月`;
+    }
     const era = formatJapaneseEra(year, month, 1);
     return era ? `${year}年（${era}）${month + 1}月` : `${year}年 ${month + 1}月`;
   }
@@ -1259,9 +1287,12 @@ overflow:hidden;
     const m = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) return dateStr || '';
     const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    const westernDate = `${y}/${String(mo + 1).padStart(2,'0')}/${String(d).padStart(2,'0')}`;
+    if (localStorage.getItem('my_calendar_hide_era') === '1') {
+      return westernDate;
+    }
     const era = formatJapaneseEra(y, mo, d);
-    return era ? `${y}/${String(mo + 1).padStart(2,'0')}/${String(d).padStart(2,'0')}（${era}${d}日）`
-               : `${y}/${String(mo + 1).padStart(2,'0')}/${String(d).padStart(2,'0')}`;
+    return era ? `${westernDate}（${era}${d}日）` : westernDate;
   }
   let currentDate = getTodayDateObject();
   let studyCurrentDate = getTodayDateObject();
@@ -2209,6 +2240,47 @@ ${history.length ? history.join(', ') : 'なし'}
   window.addEventListener('pagehide', () => { if (isTimerRunning) saveTimerState(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && isTimerRunning) { refreshElapsedTimer(); saveTimerState(); } });
 
+  function setEraDisplayMode(hide) {
+    try { localStorage.setItem('my_calendar_hide_era', hide ? '1' : '0'); } catch(e) {}
+    updateEraDisplayUI();
+    renderCalendar();
+    renderStudyCalendar();
+  }
+
+  function updateEraDisplayUI() {
+    const hide = (() => { try { return localStorage.getItem('my_calendar_hide_era') === '1'; } catch(e) { return false; } })();
+    const cb = document.getElementById('hideEraDisplay');
+    if (cb) cb.checked = hide;
+    document.documentElement.classList.toggle('hide-era-display', hide);
+  }
+
+  
+  function exportPersonalRecordsBackup() {
+    try {
+      const backup = {
+        exportedAt: new Date().toISOString(),
+        app: 'My Calendar & Diary',
+        notes: appData.notes || {},
+        studyRecords: appData.studyRecords || {},
+        languageReview: appData.languageReview || appData.languageLearning || {},
+        languageSettings: appData.languageSettings || {}
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my_calendar_personal_backup_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      alert('保存用バックアップを作成しました。USBメモリなどへ保存できます。');
+    } catch(e) {
+      console.error('exportPersonalRecordsBackup error:', e);
+      alert('バックアップの作成に失敗しました。');
+    }
+  }
+
   function saveLocalStorage() {
     try { localStorage.setItem('my_calendar_app_data_v41', JSON.stringify(appData)); } catch(e) {}
   }
@@ -2274,6 +2346,7 @@ ${history.length ? history.join(', ') : 'なし'}
     else if (themeName === 'yellow') { mainBg = '#fffde7'; mainBorder = '#ffe082'; mainColor = '#f39c12'; btnBg = '#f1c40f'; }
     else if (themeName === 'gray') { mainBg = '#f5f5f5'; mainBorder = '#cccccc'; mainColor = '#7f8c8d'; btnBg = '#95a5a6'; }
     else if (themeName === 'black') { mainBg = '#2c3e50'; mainBorder = '#34495e'; mainColor = '#ecf0f1'; btnBg = '#7f8c8d'; }
+    else if (themeName === 'brown') { mainBg = '#f7efe8'; mainBorder = '#c9a27e'; mainColor = '#8B4513'; btnBg = '#A0522D'; }
     root.style.setProperty('--main-bg', mainBg);
     root.style.setProperty('--main-border', mainBorder);
     root.style.setProperty('--main-color', mainColor);
@@ -2454,6 +2527,15 @@ for (let i = 0; i < 4; i++) {
     } else {
       gridCell.innerText = icon;
     }
+
+    if (item.notification && item.notification.enabled) {
+      gridCell.style.position = 'relative';
+      const bell = document.createElement('span');
+      bell.textContent = '🔔';
+      bell.title = '通知設定あり';
+      bell.style.cssText = 'position:absolute; right:1px; bottom:0px; font-size:7px; line-height:1;';
+      gridCell.appendChild(bell);
+    }
   }
 
   iconGrid.appendChild(gridCell);
@@ -2555,8 +2637,16 @@ cell.appendChild(iconGrid);
       if (n.startTime) {
         const timeText = document.createElement('span');
         const formatLabel = n.timeFormat === '12h' ? '12h' : n.timeFormat === '24h' ? '24h' : '?';
-        timeText.textContent = ` [${n.startTime}〜${n.endTime || ''}・${formatLabel}]`;
-        header.appendChild(timeText);
+        timeText.textContent = `📅 ${formatDateWithEra(currentSelectedDay)}　🕐 ${n.startTime}〜${n.endTime || ''}・${formatLabel}`;
+        timeText.style.marginRight = '5px';
+        header.insertBefore(timeText, header.firstChild);
+      }
+      if (n.notification && n.notification.enabled) {
+        const bell = document.createElement('span');
+        bell.textContent = ' 🔔';
+        bell.title = '通知設定あり';
+        bell.style.fontSize = '11px';
+        header.appendChild(bell);
       }
 
       const textEl = document.createElement('div');
@@ -2654,9 +2744,10 @@ cell.appendChild(iconGrid);
       let voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja')&&hints.some(h=>String(v.name||'').toLowerCase().includes(h.toLowerCase())));
       if(!voice)voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja'));
       if(voice)utter.voice=voice;
-      utter.rate=mode==='voice_male'?0.74:0.60;
-      utter.pitch=mode==='voice_male'?0.18:0.98;
-      utter.volume=mode==='voice_male'?0.94:0.86;
+      // 執事風男性の声をスマホでも聞き取りやすい速度・高さ・音量に調整。
+       utter.rate=mode==='voice_male'?0.86:0.60;
+       utter.pitch=mode==='voice_male'?0.55:0.98;
+       utter.volume=mode==='voice_male'?1.0:0.86;
       window.speechSynthesis.cancel();window.speechSynthesis.speak(utter);
     }catch(e){}
   }
@@ -3494,20 +3585,32 @@ function openTodayDatePopup() {
 
   function saveManualTimerRecord() {
     if (appData.selectedCategory && appData.subjectIcons[appData.selectedCategory]) selectedCategory = appData.selectedCategory;
-    const startH = document.getElementById('manualStartHour').value;
-    const startM = document.getElementById('manualStartMin').value;
-    const endH = document.getElementById('manualEndHour').value;
-    const endM = document.getElementById('manualEndMin').value;
-    const hoursInput = document.getElementById('manualHoursInput').value;
-    const minsInput = document.getElementById('manualMinutesInput').value;
+    const startH = document.getElementById('manualStartHour').value.trim();
+    const startM = document.getElementById('manualStartMin').value.trim();
+    const endH = document.getElementById('manualEndHour').value.trim();
+    const endM = document.getElementById('manualEndMin').value.trim();
+    const hoursInput = document.getElementById('manualHoursInput').value.trim();
+    const minsInput = document.getElementById('manualMinutesInput').value.trim();
+    const manualIs12h = document.querySelector('input[name="timeFormat"]:checked')?.value === '12';
 
     let durationText = '';
     let startStr = '';
     let endStr = '';
 
     if (startH && endH) {
-      startStr = `${startH}:${startM || '00'}`;
-      endStr = `${endH}:${endM || '00'}`;
+      startStr = manualIs12h
+        ? convertTo24Hour(startH, startM || '0', document.getElementById('manualStartAmPmSelect')?.value || 'AM', true)
+        : normalizeTimeInputPair(startH, startM || '0');
+      endStr = manualIs12h
+        ? convertTo24Hour(endH, endM || '0', document.getElementById('manualEndAmPmSelect')?.value || 'AM', true)
+        : normalizeTimeInputPair(endH, endM || '0');
+
+      const [sh, sm] = startStr.split(':').map(Number);
+      const [eh, em] = endStr.split(':').map(Number);
+      if (eh * 60 + em <= sh * 60 + sm) {
+        alert('終了時刻は開始時刻より後にしてください。');
+        return;
+      }
       durationText = `手動記録 (${startStr}〜${endStr})`;
     } else if (hoursInput || minsInput) {
       const manualH = Math.max(0, Number(hoursInput) || 0);
@@ -3520,16 +3623,13 @@ function openTodayDatePopup() {
       return;
     }
 
-    // 手動記録もタイマー画面の日付欄を保存先にします。
     const timerDateInput = document.getElementById('timerRecordDate');
-    if (timerDateInput && timerDateInput.value.trim()) {
-      setTimerRecordDate(timerDateInput.value);
-    }
+    if (timerDateInput && timerDateInput.value.trim()) setTimerRecordDate(timerDateInput.value);
     const todayStr = currentSelectedDay || `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
     if (!appData.studyRecords[todayStr]) appData.studyRecords[todayStr] = [];
 
     const manualDurationSeconds = startStr && endStr
-      ? (() => { const [sh,sm]=startStr.split(':').map(Number), [eh,em]=endStr.split(':').map(Number); let sec=(eh*60+em-sh*60-sm)*60; if(sec<0)sec+=86400; return sec; })()
+      ? (() => { const [sh,sm]=startStr.split(':').map(Number), [eh,em]=endStr.split(':').map(Number); return Math.max(0, (eh*60+em-sh*60-sm)*60); })()
       : (Math.max(0, Number(hoursInput)||0)*3600 + Math.max(0, Number(minsInput)||0)*60);
     const manualRecordTime = startStr || new Date().toTimeString().slice(0,5);
     appData.studyRecords[todayStr].push({
@@ -3542,13 +3642,17 @@ function openTodayDatePopup() {
       durationSeconds: Math.max(0, manualDurationSeconds),
       color: getSubjectColor(selectedCategory),
       isStudy: true,
-      category: selectedCategory
+      category: selectedCategory,
+      timeFormat: manualIs12h ? '12h' : '24h'
     });
     saveLocalStorage();
     const savedParts = todayStr.split('-').map(Number);
     if (savedParts.length === 3) studyCurrentDate = new Date(savedParts[0], savedParts[1] - 1, 1);
     renderCalendar();
+    studyCurrentDate = new Date(savedParts[0], savedParts[1] - 1, 1);
     renderStudyCalendar();
+    // 学習記録カレンダー側にも即時反映させます。
+    setTimeout(() => { try { renderStudyCalendar(); } catch(e) {} }, 0);
     alert('手動学習記録を追加しました！');
   }
 
@@ -3770,7 +3874,13 @@ function openTodayDatePopup() {
       const formatLabel=n.timeFormat==='12h'?'12h':n.timeFormat==='24h'?'24h':'';
       tm.textContent=n.startTime?`${n.startTime}${n.endTime?'〜'+n.endTime:''}${formatLabel?' ['+formatLabel+']':''}`:'時間未定';
       const tx=document.createElement('span');tx.className='today-dashboard-text';tx.textContent=n.text||'（アイコンのみ）';
-      row.append(ic,tm,tx); row.onclick=()=>{currentSelectedDay=ds;openDatePopupModal(ds);}; box.appendChild(row);
+      row.append(ic,tm,tx);
+      if(n.notification && n.notification.enabled){
+        const bell=document.createElement('span'); bell.textContent='🔔'; bell.title='通知設定あり';
+        bell.style.cssText='font-size:11px; flex:0 0 auto;';
+        row.appendChild(bell);
+      }
+      row.onclick=()=>{currentSelectedDay=ds;openDatePopupModal(ds);}; box.appendChild(row);
     });
   }
 
