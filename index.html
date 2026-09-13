@@ -1161,7 +1161,7 @@
     <div style="margin-bottom:12px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#555;">
       <strong style="color:var(--main-color);">📅 ＜今日のダッシュボード＞</strong><br>
       一週間モードの下に、今日の予定をコンパクトに表示できます。付箋に登録した時刻・アイコン・予定内容をそのまま表示します。不要な場合は非表示にできます。<br>
-      付箋を縦書きで記録すると、＜一日縦長スケジュール＞のところにも縦書きで記録されます。<br>
+      付箋の表示は、選択した縦書き・横書きで記録されます。＜一日縦長スケジュール＞では、すべて横書きで表示されます。<br>
       <label style="display:flex; align-items:center; gap:6px; margin-top:6px; cursor:pointer;">
         <input type="checkbox" id="showDashboardCheckbox" onchange="toggleDashboardDisplay(this)">
         ＜今日のダッシュボード＞を表示する
@@ -4001,9 +4001,7 @@ function openTodayDatePopup() {
         }
         const noteText = document.createElement('span');
         noteText.textContent = ` ${note.text || ''} (${note.startTime}~${note.endTime})`;
-        noteText.style.cssText = note.writingMode === 'vertical'
-          ? 'min-width:0; writing-mode:vertical-rl; text-orientation:mixed; white-space:normal; overflow-x:auto; overflow-y:auto; box-sizing:border-box;'
-          : 'min-width:0; word-break:break-word; writing-mode:horizontal-tb;';
+        noteText.style.cssText = 'min-width:0; word-break:break-word; writing-mode:horizontal-tb; white-space:pre-wrap;';
         mainSpan.appendChild(noteText);
         const selectSpan = document.createElement('span');
         selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
@@ -4055,9 +4053,7 @@ function openTodayDatePopup() {
         }
         const noteText = document.createElement('span');
         noteText.textContent = ` ${note.text || ''}`;
-        noteText.style.cssText = note.writingMode === 'vertical'
-          ? 'min-width:0; writing-mode:vertical-rl; text-orientation:mixed; white-space:normal; overflow-x:auto; overflow-y:auto; box-sizing:border-box;'
-          : 'min-width:0; word-break:break-word; writing-mode:horizontal-tb;';
+        noteText.style.cssText = 'min-width:0; word-break:break-word; writing-mode:horizontal-tb; white-space:pre-wrap;';
         mainSpan.appendChild(noteText);
         const selectSpan = document.createElement('span');
         selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
