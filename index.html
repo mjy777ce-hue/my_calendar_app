@@ -2589,6 +2589,13 @@ cell.appendChild(iconGrid);
     openModal('datePopupModal');
   }
 
+  function toggleNoteDashboardDisplay(note, checkbox) {
+    if (!note) return;
+    note.showDashboard = !!checkbox.checked;
+    saveLocalStorage();
+    renderTodayDashboard();
+  }
+
   function renderDatePopupNotesList() {
     const notesListEl = document.getElementById('datePopupNotesList');
     const dayNotes = appData.notes[currentSelectedDay] || [];
@@ -2665,8 +2672,25 @@ cell.appendChild(iconGrid);
       selectEl.textContent = '選択';
       selectEl.onclick = (e) => { e.stopPropagation(); selectDatePopupNote(n.id); };
 
+      const dashboardLabel = document.createElement('label');
+      dashboardLabel.style.cssText = 'display:flex; align-items:center; gap:2px; font-size:8px; color:#777; cursor:pointer; margin-left:3px;';
+      dashboardLabel.title = 'この付箋を今日のダッシュボードに表示';
+      dashboardLabel.onclick = (e) => e.stopPropagation();
+
+      const dashboardCheckbox = document.createElement('input');
+      dashboardCheckbox.type = 'checkbox';
+      dashboardCheckbox.checked = n.showDashboard !== false;
+      dashboardCheckbox.onchange = (e) => {
+        e.stopPropagation();
+        toggleNoteDashboardDisplay(n, dashboardCheckbox);
+      };
+
+      dashboardLabel.appendChild(dashboardCheckbox);
+      dashboardLabel.appendChild(document.createTextNode('ダッシュボード'));
+
       item.appendChild(main);
       item.appendChild(selectEl);
+      item.appendChild(dashboardLabel);
       notesListEl.appendChild(item);
     });
   }
@@ -3860,7 +3884,7 @@ function openTodayDatePopup() {
     const box=document.getElementById('todayDashboard'); if(!box)return;
     const visible=appData.showDashboard!==false; box.style.display=visible?'block':'none'; if(!visible)return;
     const t=getTodayDateObject(), ds=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-    const notes=(appData.notes[ds]||[]).filter(n=>n&&!n.isStudy).sort((a,b)=>{
+    const notes=(appData.notes[ds]||[]).filter(n=>n&&!n.isStudy&&n.showDashboard!==false).sort((a,b)=>{
       const at=/^\d{2}:\d{2}$/.test(String(a.startTime||''))?a.startTime:'99:99';
       const bt=/^\d{2}:\d{2}$/.test(String(b.startTime||''))?b.startTime:'99:99'; return at.localeCompare(bt);
     });
@@ -3903,7 +3927,33 @@ function openTodayDatePopup() {
       const [sh,sm]=r.startTime.split(':').map(Number),[eh,em]=r.endTime.split(':').map(Number);let s=(eh*60+em-sh*60-sm)*60;if(s<0)s+=86400;return s;
     } return 0;
   }
-  function openActivityChartModal(){openModal('activityChartModal');renderActivityChart();}
+  function openActivityChartModal(){
+    openModal('activityChartModal');
+    renderActivityChart();
+    requestAnimationFrame(() => {
+      const scroll = document.querySelector('#activityChartModal .activity-chart-scroll');
+      if (!scroll) return;
+      const today = getTodayDateObject();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const chartTitle = document.querySelector('#activityChartModal .activity-chart-title');
+      const titleText = chartTitle ? chartTitle.textContent : '';
+      const match = titleText.match(/(\d{4})年.*?(\d{1,2})月/);
+      if (!match) return;
+      const chartYear = Number(match[1]);
+      const chartMonth = Number(match[2]) - 1;
+      if (chartYear !== today.getFullYear() || chartMonth !== today.getMonth()) return;
+
+      const day = today.getDate();
+      const cols = scroll.querySelector('.activity-columns');
+      if (!cols) return;
+      const col = cols.children[day - 1];
+      if (!col) return;
+
+      const targetLeft = Math.max(0, col.offsetLeft - Math.max(0, (scroll.clientWidth - col.offsetWidth) / 2));
+      scroll.scrollLeft = targetLeft;
+    });
+  }
   function openActivityChartFromTimer(){ closeModal('timerModal'); openModal('activityChartModal'); renderActivityChart(); }
   function renderActivityChart(){
     const host=document.getElementById('activityChartContainer');if(!host)return;
