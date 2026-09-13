@@ -434,61 +434,156 @@
 
 #datePopupNotesList {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 記録済み付箋は2列を維持。横方向に収まりきらない場合は横スクロール。 */
+  grid-template-columns: repeat(2, 180px);
   gap: 6px;
-
   max-height: 300px;
   overflow-y: auto;
-  overflow-x: hidden;
-
+  overflow-x: auto;
   padding: 3px;
   box-sizing: border-box;
   align-items: start;
+  min-width: 0;
 }
 
-/* 実際に現在のJavaScriptが作っている予定カード */
+/* 記録済み付箋：各カードの形を独立させ、2段目・3段目以降も同じ型を保ちます。 */
 #datePopupNotesList .view-note-item {
-  width: 100%;
-  min-width: 0;
-  min-height: 62px;
-
+  width: 180px;
+  min-width: 180px;
+  min-height: 132px;
   box-sizing: border-box;
   margin: 0;
-
   padding: 7px;
-
   background: #fffdf2;
   border: 1px solid #eadfbc;
   border-radius: 7px;
-
   overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 3px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
 }
 
-/* 時刻 */
-#datePopupNotesList .view-note-item > div:first-child > div:first-child {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  font-size: 9px;
+/* ダッシュボードは常に最上段。 */
+#datePopupNotesList .view-note-item > label {
+  display: flex !important;
+  width: 100% !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  flex: 0 0 18px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: nowrap !important;
 }
 
-/* 予定・日記本文 */
-#datePopupNotesList .view-note-item > div:first-child > div:nth-child(2) {
-  font-size: 11px;
-  line-height: 1.3;
-
-  word-break: break-word;
+/* 「時間」は本文とは別の行に固定。 */
+#datePopupNotesList .note-record-body {
+  display: grid !important;
+  grid-template-columns: 26px minmax(0,1fr) 22px !important;
+  grid-template-rows: auto minmax(78px,auto) !important;
+  align-items: start !important;
+  column-gap: 4px !important;
+  row-gap: 3px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+}
+#datePopupNotesList .note-time-row {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 16px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  font-size: 9px !important;
+  color: var(--main-color) !important;
+  font-weight: bold !important;
+  writing-mode: horizontal-tb !important;
 }
 
-/* 「選択」は小さく */
-#datePopupNotesList .view-note-item > span {
-  font-size: 8px !important;
+/* アイコンは本文の左側。 */
+#datePopupNotesList .note-icon-cell {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  box-sizing: border-box !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
 }
- width:100%;
-box-sizing:border-box;
-white-space:nowrap;
-overflow:hidden;
+#datePopupNotesList .note-icon-cell img {
+  display: block !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+}
+
+/* 本文は付箋ごとの指定だけを使用。 */
+#datePopupNotesList .note-text-horizontal {
+  /* 横書きは付箋カード全体の横幅を使い、縦書きの列幅に引っ張られないようにする。 */
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 78px !important;
+  min-height: 78px !important;
+  max-height: 110px !important;
+  box-sizing: border-box !important;
+  padding-left: 30px !important;
+  padding-right: 24px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  line-break: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+  display: block !important;
+}
+#datePopupNotesList .note-text-vertical {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 78px !important;
+  min-height: 78px !important;
+  max-height: 110px !important;
+  box-sizing: border-box !important;
+  writing-mode: vertical-rl !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  line-break: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  position: relative !important;
+}
+
+/* 「選択」は本文の右側で固定。 */
+#datePopupNotesList .note-select {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  width: 22px !important;
+  min-width: 22px !important;
+  box-sizing: border-box !important;
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+}
+
 /* 今日の予定・日記：時間欄の縦の余白を詰める */
 .date-popup-time-format {
   margin: 0 !important;
@@ -507,11 +602,12 @@ overflow:hidden;
 
 
     /* ===== 今日のダッシュボード ===== */
-    .today-dashboard{margin-top:10px;padding:10px;background:#fff;border:1px solid var(--main-border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
-    .today-dashboard-title{text-align:center;color:var(--main-color);font-size:12px;font-weight:bold;margin-bottom:6px;}
-    .today-dashboard-item{display:flex;align-items:center;gap:6px;padding:5px 6px;margin:3px 0;background:#fffafc;border-radius:7px;font-size:10px;border-left:3px solid var(--main-border);cursor:pointer;}
+    .today-dashboard{margin-top:10px;padding:10px;background:#fff;border:1px solid var(--main-border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05);box-sizing:border-box;max-height:300px;overflow:auto;}
+    .today-dashboard-title{text-align:center;color:var(--main-color);font-size:12px;font-weight:bold;margin-bottom:6px;position:sticky;top:0;background:#fff;padding-bottom:3px;z-index:1;}
+    .today-dashboard-item{display:flex;align-items:center;gap:6px;padding:7px 8px;margin:4px 0;background:#fffafc;border-radius:8px;font-size:10px;border-left:3px solid var(--main-border);cursor:pointer;box-sizing:border-box;min-width:300px;width:max-content;max-width:none;white-space:nowrap;}
     .today-dashboard-time{width:82px;flex:0 0 82px;font-weight:bold;color:var(--main-color);}
-    .today-dashboard-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .today-dashboard-text{flex:0 0 220px;min-width:220px;overflow:auto;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;box-sizing:border-box;}
+    .today-dashboard-text.today-dashboard-vertical{flex:0 0 120px;width:120px;min-width:120px;height:110px;min-height:110px;max-height:110px;overflow-x:auto;overflow-y:hidden;writing-mode:vertical-rl !important;text-orientation:mixed;white-space:pre-wrap !important;word-break:normal;overflow-wrap:normal;text-overflow:clip;box-sizing:border-box;}
     .today-dashboard-empty{text-align:center;color:#999;font-size:10px;padding:7px;}
     /* ===== 1ヶ月・24時間活動記録 ===== */
     .activity-chart-wrap{margin-top:10px;border:1px solid var(--main-border);border-radius:12px;background:#fff;padding:8px;overflow:hidden;}
@@ -665,6 +761,14 @@ overflow:hidden;
           </div>
         </div>
         <label style="display:flex; align-items:center; gap:5px; margin-top:5px; font-size:10px; color:#555; cursor:pointer;">
+          <input type="checkbox" id="noteShowDashboard" checked> 📅 この付箋をダッシュボードに表示
+        </label>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:5px; font-size:10px; color:#555; flex-wrap:wrap;">
+          <span>📝 付箋の表示：</span>
+          <label style="cursor:pointer;"><input type="radio" name="noteWritingMode" value="horizontal" checked> 横書き</label>
+          <label style="cursor:pointer;"><input type="radio" name="noteWritingMode" value="vertical"> 縦書き</label>
+        </div>
+        <label style="display:flex; align-items:center; gap:5px; margin-top:5px; font-size:10px; color:#555; cursor:pointer;">
           <input type="checkbox" id="noteNotifyEnabled" onchange="handleNoteNotificationToggle('note', this)"> 🔔 この付箋を通知する
         </label>
         <div style="font-size:9px; color:#888; line-height:1.35; margin:2px 0 0 20px;">
@@ -688,7 +792,7 @@ overflow:hidden;
           <div style="font-weight:bold; margin:4px 0 2px;">通知の種類</div>
           <label style="display:block; margin:2px 0;"><input type="radio" name="noteNotificationSoundMode" value="sound" checked> 🔔 通常の通知音</label>
           <label style="display:block; margin:2px 0;"><input type="radio" name="noteNotificationSoundMode" value="off"> 🔕 音なし</label>
-          <label style="display:block; margin:2px 0;"><input type="radio" name="noteNotificationSoundMode" value="voice_female"> 👩 家政婦長風の女性の声</label>
+          <label style="display:block; margin:2px 0;"><input type="radio" name="noteNotificationSoundMode" value="voice_female"> 👩 レディスメイド風の女性の声</label>
           <label style="display:block; margin:2px 0;"><input type="radio" name="noteNotificationSoundMode" value="voice_male"> 👨 執事風の男性の声</label>
           <div style="display:flex; gap:4px; align-items:center; margin-top:4px;">
             <span>呼びかけ：</span><input type="text" id="noteNotifyAddress" placeholder="例：美希さん（任意）" maxlength="30" style="flex:1; min-width:0; padding:3px; font-size:9px; border:1px solid #ddd; border-radius:5px;">
@@ -795,6 +899,14 @@ overflow:hidden;
         </div>
       </div>
       <label style="display:flex; align-items:center; gap:5px; margin:5px 0 2px; font-size:10px; color:#555; cursor:pointer;">
+        <input type="checkbox" id="popupNoteShowDashboard" checked> 📅 この付箋をダッシュボードに表示
+      </label>
+      <div style="display:flex; align-items:center; gap:6px; margin:5px 0 2px; font-size:10px; color:#555; flex-wrap:wrap;">
+        <span>📝 付箋の表示：</span>
+        <label style="cursor:pointer;"><input type="radio" name="popupNoteWritingMode" value="horizontal" checked> 横書き</label>
+        <label style="cursor:pointer;"><input type="radio" name="popupNoteWritingMode" value="vertical"> 縦書き</label>
+      </div>
+      <label style="display:flex; align-items:center; gap:5px; margin:5px 0 2px; font-size:10px; color:#555; cursor:pointer;">
         <input type="checkbox" id="popupNoteNotifyEnabled" onchange="handleNoteNotificationToggle('popup', this)"> 🔔 この付箋を通知する
       </label>
       <div style="font-size:9px; color:#888; line-height:1.35; margin:0 0 3px 20px;">
@@ -818,7 +930,7 @@ overflow:hidden;
         <div style="font-weight:bold; margin:4px 0 2px;">通知の種類</div>
         <label style="display:block; margin:2px 0;"><input type="radio" name="popupNoteNotificationSoundMode" value="sound" checked> 🔔 通常の通知音</label>
         <label style="display:block; margin:2px 0;"><input type="radio" name="popupNoteNotificationSoundMode" value="off"> 🔕 音なし</label>
-        <label style="display:block; margin:2px 0;"><input type="radio" name="popupNoteNotificationSoundMode" value="voice_female"> 👩 家政婦長風の女性の声</label>
+        <label style="display:block; margin:2px 0;"><input type="radio" name="popupNoteNotificationSoundMode" value="voice_female"> 👩 レディスメイド風の女性の声</label>
         <label style="display:block; margin:2px 0;"><input type="radio" name="popupNoteNotificationSoundMode" value="voice_male"> 👨 執事風の男性の声</label>
         <div style="display:flex; gap:4px; align-items:center; margin-top:4px;">
           <span>呼びかけ：</span><input type="text" id="popupNoteNotifyAddress" placeholder="例：美希さん（任意）" maxlength="30" style="flex:1; min-width:0; padding:3px; font-size:9px; border:1px solid #ddd; border-radius:5px;">
@@ -1049,6 +1161,7 @@ overflow:hidden;
     <div style="margin-bottom:12px; padding:8px; border:1px dashed var(--main-border); border-radius:8px; background:#fff9fb; font-size:10px; line-height:1.6; color:#555;">
       <strong style="color:var(--main-color);">📅 ＜今日のダッシュボード＞</strong><br>
       一週間モードの下に、今日の予定をコンパクトに表示できます。付箋に登録した時刻・アイコン・予定内容をそのまま表示します。不要な場合は非表示にできます。<br>
+      付箋を縦書きで記録すると、＜一日縦長スケジュール＞のところにも縦書きで記録されます。<br>
       <label style="display:flex; align-items:center; gap:6px; margin-top:6px; cursor:pointer;">
         <input type="checkbox" id="showDashboardCheckbox" onchange="toggleDashboardDisplay(this)">
         ＜今日のダッシュボード＞を表示する
@@ -2306,6 +2419,18 @@ ${history.length ? history.join(', ') : 'なし'}
       if (!appData.subjectIcons || typeof appData.subjectIcons !== 'object') appData.subjectIcons = {};
       if (!appData.subjectColors || typeof appData.subjectColors !== 'object') appData.subjectColors = {};
       if (typeof appData.showDashboard !== 'boolean') appData.showDashboard = true;
+      Object.keys(appData.notes || {}).forEach(dateStr => {
+        (appData.notes[dateStr] || []).forEach(note => {
+          if (note && !note.isStudy && typeof note.showDashboard !== 'boolean') note.showDashboard = true;
+          // この表示方向機能を追加する前に保存された付箋は、横書きを標準にします。
+          // 新しい付箋は、記録時に選んだ横書き／縦書きをそのまま保持します。
+          if (note && !note.isStudy && note.writingModeSelected !== true) {
+            note.writingMode = 'horizontal';
+            note.writingModeSelected = true;
+          }
+          if (note && !note.isStudy && note.writingMode !== 'vertical') note.writingMode = 'horizontal';
+        });
+      });
       if (typeof appData.selectedCategory !== 'string') appData.selectedCategory = ''; 
       // 登録済みの学習内容を優先して、再読み込み後も同じ学習内容を選択します。
       if (appData.selectedCategory && appData.subjectIcons[appData.selectedCategory]) {
@@ -2581,6 +2706,11 @@ cell.appendChild(iconGrid);
     document.getElementById('popupEndTimeHour').value = '';
     document.getElementById('popupEndTimeMin').value = '';
     resetNoteNotificationUI('popup', dateStr);
+    const popupDash = document.getElementById('popupNoteShowDashboard');
+    if (popupDash) popupDash.checked = true;
+    document.querySelectorAll('input[name="popupNoteWritingMode"]').forEach(r => {
+      r.checked = r.value === 'horizontal';
+    });
     document.getElementById('popupStartAmPm').value = 'AM';
     document.getElementById('popupEndAmPm').value = 'AM';
     document.querySelectorAll('input[name="popupTimeFormat"]').forEach(r => { r.checked = r.value === '24'; });
@@ -2619,11 +2749,26 @@ cell.appendChild(iconGrid);
       };
 
       const main = document.createElement('div');
-      main.style.flex = '1';
+      // 付箋本文の表示方向は、付箋ごとの保存設定だけで決まるようにします。
+      // この日付ポップアップでは「ダッシュボード」を付箋の最上部に置き、
+      // 本文をその下の広い領域で表示できるようにします。
+      main.style.flex = '1 1 auto';
+      main.style.minWidth = '0';
+      main.style.width = '100%';
+      main.style.boxSizing = 'border-box';
+      // 親要素から縦書き設定が継承されないよう、付箋カードの構造自体を横書き基準に固定します。
+      main.style.writingMode = 'horizontal-tb';
+      main.style.textOrientation = 'mixed';
 
+      // 記録済み付箋は「ダッシュボード → 時間 → アイコン＋本文」の順に固定。
+      // 各付箋の本文だけが自分の横書き／縦書き設定を持つため、
+      // 隣の付箋や上下の付箋の表示方向に影響されません。
       const header = document.createElement('div');
+      header.className = 'note-icon-cell';
       header.style.fontWeight = 'bold';
       header.style.color = 'var(--main-color)';
+      header.style.writingMode = 'horizontal-tb';
+      header.style.textOrientation = 'mixed';
       const icon = n.icon || '📌';
       if (typeof icon === 'string' && (icon.startsWith('data:image') || icon.startsWith('http'))) {
         const img = document.createElement('img');
@@ -2634,46 +2779,82 @@ cell.appendChild(iconGrid);
         img.style.objectFit = 'cover';
         img.style.borderRadius = '50%';
         img.style.verticalAlign = 'middle';
-        img.style.marginRight = '4px';
         header.appendChild(img);
       } else {
         const iconText = document.createElement('span');
         iconText.textContent = icon;
         header.appendChild(iconText);
       }
+
+      const timeRow = document.createElement('div');
+      timeRow.className = 'note-time-row';
+      timeRow.style.writingMode = 'horizontal-tb';
+      timeRow.style.textOrientation = 'mixed';
       if (n.startTime) {
         const timeText = document.createElement('span');
-        const formatLabel = n.timeFormat === '12h' ? '12h' : n.timeFormat === '24h' ? '24h' : '?';
-        timeText.textContent = `📅 ${formatDateWithEra(currentSelectedDay)}　🕐 ${n.startTime}〜${n.endTime || ''}・${formatLabel}`;
-        timeText.style.marginRight = '5px';
-        header.insertBefore(timeText, header.firstChild);
+        // 記録済み付箋では時間だけを表示し、12h/24hのラベルは表示しません。
+        timeText.textContent = `🕐 ${n.startTime}〜${n.endTime || ''}`;
+        timeText.style.writingMode = 'horizontal-tb';
+        timeText.style.whiteSpace = 'nowrap';
+        timeRow.appendChild(timeText);
       }
       if (n.notification && n.notification.enabled) {
         const bell = document.createElement('span');
         bell.textContent = ' 🔔';
         bell.title = '通知設定あり';
         bell.style.fontSize = '11px';
-        header.appendChild(bell);
+        timeRow.appendChild(bell);
       }
 
       const textEl = document.createElement('div');
-      textEl.style.marginTop = '2px';
+      const isVerticalNote = String(n.writingMode || '').toLowerCase() === 'vertical';
+      textEl.className = isVerticalNote ? 'note-text-vertical' : 'note-text-horizontal';
+      textEl.style.margin = '0';
       textEl.style.color = '#333';
-      textEl.style.whiteSpace = 'pre-wrap';
+      textEl.style.display = 'block';
+      textEl.style.boxSizing = 'border-box';
+      textEl.style.textAlign = 'left';
+      textEl.style.setProperty('writing-mode', isVerticalNote ? 'vertical-rl' : 'horizontal-tb', 'important');
+      if (!isVerticalNote) {
+        textEl.style.setProperty('grid-column', '1 / -1', 'important');
+        textEl.style.setProperty('width', '100%', 'important');
+        textEl.style.setProperty('padding-left', '30px', 'important');
+        textEl.style.setProperty('padding-right', '24px', 'important');
+        textEl.style.setProperty('white-space', 'pre-wrap', 'important');
+        textEl.style.setProperty('overflow-wrap', 'anywhere', 'important');
+      }
+      textEl.style.setProperty('text-orientation', 'mixed', 'important');
+      textEl.style.setProperty('direction', 'ltr', 'important');
+      textEl.dataset.writingMode = isVerticalNote ? 'vertical' : 'horizontal';
       textEl.textContent = n.text || '';
 
-      main.appendChild(header);
-      main.appendChild(textEl);
+      // 縦書き付箋だけは、縦書きの描画領域とスクロール操作を分離します。
+      // 外側を通常の横書き座標系にして物理的な縦・横スクロールを確実に持たせ、
+      // 内側の本文だけを縦書きにすることで、ブラウザ／スマホごとの writing-mode
+      // と overflow-y の軸解釈の違いで縦スクロールバーが消えるのを防ぎます。
+      let textDisplayEl = textEl;
+      if (isVerticalNote) {
+        const verticalScrollWrap = document.createElement('div');
+        verticalScrollWrap.className = 'note-text-vertical-scroll';
+        verticalScrollWrap.style.cssText = 'grid-column:2; grid-row:2; width:100%; min-width:0; height:78px; min-height:78px; max-height:110px; box-sizing:border-box; overflow:scroll; writing-mode:horizontal-tb; direction:ltr;';
+        textEl.style.setProperty('width', 'max-content', 'important');
+        textEl.style.setProperty('min-width', '100%', 'important');
+        textEl.style.setProperty('height', 'max-content', 'important');
+        textEl.style.setProperty('min-height', '100%', 'important');
+        textEl.style.setProperty('max-height', 'none', 'important');
+        textEl.style.setProperty('overflow', 'visible', 'important');
+        verticalScrollWrap.appendChild(textEl);
+        textDisplayEl = verticalScrollWrap;
+      }
 
       const selectEl = document.createElement('span');
-      selectEl.style.fontSize = '10px';
-      selectEl.style.color = '#e74c3c';
-      selectEl.style.cursor = 'pointer';
+      selectEl.className = 'note-select';
+      selectEl.style.cssText = 'font-size:8px; color:#e74c3c; cursor:pointer; flex:0 0 auto; writing-mode:horizontal-tb; text-orientation:mixed;';
       selectEl.textContent = '選択';
       selectEl.onclick = (e) => { e.stopPropagation(); selectDatePopupNote(n.id); };
 
       const dashboardLabel = document.createElement('label');
-      dashboardLabel.style.cssText = 'display:flex; align-items:center; gap:2px; font-size:8px; color:#777; cursor:pointer; margin-left:3px;';
+      dashboardLabel.style.cssText = 'display:flex; align-items:center; justify-content:flex-start; gap:2px; width:100%; box-sizing:border-box; font-size:8px; color:#777; cursor:pointer; margin:0 0 2px 0;';
       dashboardLabel.title = 'この付箋を今日のダッシュボードに表示';
       dashboardLabel.onclick = (e) => e.stopPropagation();
 
@@ -2688,9 +2869,27 @@ cell.appendChild(iconGrid);
       dashboardLabel.appendChild(dashboardCheckbox);
       dashboardLabel.appendChild(document.createTextNode('ダッシュボード'));
 
-      item.appendChild(main);
-      item.appendChild(selectEl);
+      const noteBody = document.createElement('div');
+      noteBody.className = 'note-record-body';
+      noteBody.style.cssText = 'display:grid; grid-template-columns:26px minmax(0,1fr) 22px; grid-template-rows:auto minmax(78px,auto); align-items:start; column-gap:4px; row-gap:3px; width:100%; min-width:0; box-sizing:border-box; writing-mode:horizontal-tb; text-orientation:mixed;';
+      noteBody.appendChild(timeRow);
+      noteBody.appendChild(header);
+      noteBody.appendChild(textDisplayEl);
+      noteBody.appendChild(selectEl);
+
+      item.style.display = 'block';
+      item.style.boxSizing = 'border-box';
+      item.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      item.style.setProperty('text-orientation', 'mixed', 'important');
+      dashboardLabel.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      noteBody.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      timeRow.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      header.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      selectEl.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+      textEl.style.setProperty('writing-mode', isVerticalNote ? 'vertical-rl' : 'horizontal-tb', 'important');
+
       item.appendChild(dashboardLabel);
+      item.appendChild(noteBody);
       notesListEl.appendChild(item);
     });
   }
@@ -2714,9 +2913,19 @@ cell.appendChild(iconGrid);
       img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:12px;';
       iconBox.appendChild(img);
     } else { iconBox.textContent = icon; iconBox.style.fontSize = '38px'; }
-    const formatLabel = found.timeFormat === '12h' ? '12時間制で入力' : found.timeFormat === '24h' ? '24時間制で入力' : '記録形式不明';
-    document.getElementById('noteDetailTime').textContent = found.startTime ? `🕐 ${found.startTime}〜${found.endTime || ''}　（${formatLabel}）` : '';
-    document.getElementById('noteDetailText').textContent = found.text || '';
+    // 詳細表示でも時間だけを表示し、12h/24hのラベルは表示しません。
+    document.getElementById('noteDetailTime').textContent = found.startTime ? `🕐 ${found.startTime}〜${found.endTime || ''}` : '';
+    const detailText = document.getElementById('noteDetailText');
+    const detailIsVertical = String(found.writingMode || '').toLowerCase() === 'vertical';
+    // タップして詳細を開いた場合も、元の付箋の表示方向をそのまま再現します。
+    detailText.style.setProperty('writing-mode', detailIsVertical ? 'vertical-rl' : 'horizontal-tb', 'important');
+    detailText.style.setProperty('text-orientation', 'mixed', 'important');
+    detailText.style.setProperty('direction', 'ltr', 'important');
+    detailText.style.setProperty('white-space', 'pre-wrap', 'important');
+    detailText.style.setProperty('word-break', detailIsVertical ? 'normal' : 'break-word', 'important');
+    detailText.style.setProperty('overflow-wrap', detailIsVertical ? 'normal' : 'break-word', 'important');
+    detailText.dataset.writingMode = detailIsVertical ? 'vertical' : 'horizontal';
+    detailText.textContent = found.text || '';
     openModal('noteDetailModal');
   }
 
@@ -2769,7 +2978,7 @@ cell.appendChild(iconGrid);
       if(!voice)voice=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('ja'));
       if(voice)utter.voice=voice;
       // 執事風男性の声をスマホでも聞き取りやすい速度・高さ・音量に調整。
-       utter.rate=mode==='voice_male'?0.86:0.60;
+       utter.rate=0.86;
        utter.pitch=mode==='voice_male'?0.55:0.98;
        utter.volume=mode==='voice_male'?1.0:0.86;
       window.speechSynthesis.cancel();window.speechSynthesis.speak(utter);
@@ -3025,8 +3234,11 @@ cell.appendChild(iconGrid);
       appData.notes[currentSelectedDay].push({
         id: 'note_' + Date.now(), text, icon, startTime, endTime,
         timeFormat: popupIs12h ? '12h' : '24h',
+        writingMode: document.querySelector('input[name="popupNoteWritingMode"]:checked')?.value === 'vertical' ? 'vertical' : 'horizontal',
+        writingModeSelected: true,
         notifyTime: notification.customAt ? notification.customAt.slice(11,16) : '08:00',
         notification,
+        showDashboard: document.getElementById('popupNoteShowDashboard')?.checked !== false,
         isStudy:false, category:'予定・メモ'
       });
       saveLocalStorage();
@@ -3788,9 +4000,10 @@ function openTodayDatePopup() {
           mainSpan.appendChild(iconText);
         }
         const noteText = document.createElement('span');
-        const formatLabel = note.timeFormat === '12h' ? '12時間制' : note.timeFormat === '24h' ? '24時間制' : '記録形式不明';
-        noteText.textContent = ` ${note.text || ''} (${note.startTime}~${note.endTime})［${formatLabel}］`;
-        noteText.style.cssText = 'min-width:0; word-break:break-word;';
+        noteText.textContent = ` ${note.text || ''} (${note.startTime}~${note.endTime})`;
+        noteText.style.cssText = note.writingMode === 'vertical'
+          ? 'min-width:0; writing-mode:vertical-rl; text-orientation:mixed; white-space:normal; overflow-x:auto; overflow-y:auto; box-sizing:border-box;'
+          : 'min-width:0; word-break:break-word; writing-mode:horizontal-tb;';
         mainSpan.appendChild(noteText);
         const selectSpan = document.createElement('span');
         selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
@@ -3842,7 +4055,9 @@ function openTodayDatePopup() {
         }
         const noteText = document.createElement('span');
         noteText.textContent = ` ${note.text || ''}`;
-        noteText.style.cssText = 'min-width:0; word-break:break-word;';
+        noteText.style.cssText = note.writingMode === 'vertical'
+          ? 'min-width:0; writing-mode:vertical-rl; text-orientation:mixed; white-space:normal; overflow-x:auto; overflow-y:auto; box-sizing:border-box;'
+          : 'min-width:0; word-break:break-word; writing-mode:horizontal-tb;';
         mainSpan.appendChild(noteText);
         const selectSpan = document.createElement('span');
         selectSpan.style.cssText = 'font-size:10px; color:#e74c3c; cursor:pointer; flex-shrink:0;';
@@ -3895,15 +4110,31 @@ function openTodayDatePopup() {
       const row=document.createElement('div');row.className='today-dashboard-item';
       const ic=document.createElement('span');ic.textContent=iconToDisplayText(n.icon||'📌');
       const tm=document.createElement('span');tm.className='today-dashboard-time';
-      const formatLabel=n.timeFormat==='12h'?'12h':n.timeFormat==='24h'?'24h':'';
-      tm.textContent=n.startTime?`${n.startTime}${n.endTime?'〜'+n.endTime:''}${formatLabel?' ['+formatLabel+']':''}`:'時間未定';
+      tm.textContent=n.startTime?`${n.startTime}${n.endTime?'〜'+n.endTime:''}`:'時間未定';
       const tx=document.createElement('span');tx.className='today-dashboard-text';tx.textContent=n.text||'（アイコンのみ）';
+      if(n.writingMode!=='vertical'){
+        tx.style.whiteSpace='pre-wrap';
+        tx.style.overflowWrap='anywhere';
+        tx.style.wordBreak='break-word';
+      }
+      if(n.writingMode==='vertical'){
+        tx.classList.add('today-dashboard-vertical');
+      }
       row.append(ic,tm,tx);
       if(n.notification && n.notification.enabled){
         const bell=document.createElement('span'); bell.textContent='🔔'; bell.title='通知設定あり';
         bell.style.cssText='font-size:11px; flex:0 0 auto;';
         row.appendChild(bell);
       }
+      const dashLabel=document.createElement('label');
+      dashLabel.style.cssText='display:flex;align-items:center;gap:2px;font-size:8px;color:#777;cursor:pointer;flex:0 0 auto;';
+      dashLabel.title='この付箋をダッシュボードに表示／非表示';
+      dashLabel.onclick=e=>e.stopPropagation();
+      const dashCb=document.createElement('input');
+      dashCb.type='checkbox'; dashCb.checked=n.showDashboard!==false;
+      dashCb.onchange=e=>{e.stopPropagation();toggleNoteDashboardDisplay(n,dashCb);};
+      dashLabel.append(dashCb,document.createTextNode('表示'));
+      row.appendChild(dashLabel);
       row.onclick=()=>{currentSelectedDay=ds;openDatePopupModal(ds);}; box.appendChild(row);
     });
   }
@@ -4727,6 +4958,11 @@ function openTodayDatePopup() {
     resetNoteNotificationUI('note', dateStr);
     document.getElementById('notifyTimeHourInput').value = '08';
     document.getElementById('notifyTimeMinInput').value = '50';
+    const noteDash = document.getElementById('noteShowDashboard');
+    if (noteDash) noteDash.checked = true;
+    document.querySelectorAll('input[name="noteWritingMode"]').forEach(r => {
+      r.checked = r.value === 'horizontal';
+    });
     document.querySelectorAll('input[name="globalTimeFormat"]').forEach(r => {
       r.checked = r.value === '24';
     });
@@ -4764,7 +5000,10 @@ function openTodayDatePopup() {
       appData.notes[currentSelectedDay].push({
         id: 'note_' + Date.now(), text, icon, startTime, endTime,
         timeFormat: noteIs12h ? '12h' : '24h', notifyTime,
-        notification, isStudy: false, category: '予定・メモ'
+        writingModeSelected: true,
+        notification, showDashboard: document.getElementById('noteShowDashboard')?.checked !== false,
+        writingMode: document.querySelector('input[name="noteWritingMode"]:checked')?.value === 'vertical' ? 'vertical' : 'horizontal',
+        isStudy: false, category: '予定・メモ'
       });
       saveLocalStorage();
       renderCalendar();
